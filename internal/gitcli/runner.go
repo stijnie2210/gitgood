@@ -1,0 +1,70 @@
+package gitcli
+
+import (
+	"bytes"
+	"fmt"
+	"os/exec"
+)
+
+type Result struct {
+	Stdout string
+	Stderr string
+}
+
+type ExitError struct {
+	Code   int
+	Stderr string
+}
+
+func (e *ExitError) Error() string {
+	return fmt.Sprintf("git exited %d: %s", e.Code, e.Stderr)
+}
+
+func Run(repoPath string, args ...string) (Result, error) {
+	cmd := exec.Command("git", args...)
+	cmd.Dir = repoPath
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	result := Result{
+		Stdout: stdout.String(),
+		Stderr: stderr.String(),
+	}
+
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return result, &ExitError{Code: exitErr.ExitCode(), Stderr: stderr.String()}
+		}
+		return result, err
+	}
+
+	return result, nil
+}
+
+func RunWithInput(repoPath string, stdin []byte, args ...string) (Result, error) {
+	cmd := exec.Command("git", args...)
+	cmd.Dir = repoPath
+	cmd.Stdin = bytes.NewReader(stdin)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	result := Result{
+		Stdout: stdout.String(),
+		Stderr: stderr.String(),
+	}
+
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return result, &ExitError{Code: exitErr.ExitCode(), Stderr: stderr.String()}
+		}
+		return result, err
+	}
+
+	return result, nil
+}

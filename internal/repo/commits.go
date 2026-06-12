@@ -1,0 +1,322 @@
+package repo
+
+import (
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/go-git/go-git/v5/plumbing"
+	gogitdiff "github.com/go-git/go-git/v5/plumbing/format/diff"
+	"github.com/go-git/go-git/v5/plumbing/object"
+
+	"gitgood/internal/gitcli"
+	"gitgood/internal/graph"
+)
+
+func (m *Manager) GetCommitGraph(repoPath string, limit int) ([]graph.GraphRow, error) {
+	if _, err := m.Get(repoPath); err != nil {
+		return nil, err
+	}
+	if limit <= 0 {
+		limit = 2000
+	}
+	return getCommitGraphShell(repoPath, limit)
+}
+
+
+func getCommitGraphShell(repoPath string, limit int) ([]graph.GraphRow, error) {
+	labelMap := buildLabelMapShell(repoPath)
+
+	result, err := gitcli.Run(repoPath, "log", "--all", "--date-order",
+		fmt.Sprintf("-n%d", limit),
+		"--pretty=format:%H\t%P\t%an\t%ai\t%s")
+	if err != nil {
+		return nil, fmt.Errorf("git log: %w", err)
+	}
+
+	var commits []graph.CommitNode
+	for line := range strings.SplitSeq(result.Stdout, "\n") {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		parts := strings.SplitN(line, "\t", 5)
+		if len(parts) < 5 {
+			continue
+		}
+
+		var parents []string
+		if parts[1] != "" {
+			parents = strings.Fields(parts[1])
+		}
+
+		t, _ := time.Parse("2006-01-02 15:04:05 -0700", parts[3])
+		dateStr := t.Format("2 Jan 2006")
+		if t.IsZero() {
+			dateStr = parts[3]
+		}
+
+		commits = append(commits, graph.CommitNode{
+			Hash:         parts[0],
+			Subject:      parts[4],
+			Author:       parts[2],
+			Date:         dateStr,
+			ParentHashes: parents,
+		})
+	}
+
+	return graph.BuildGraph(commits, labelMap), nil
+}
+
+func buildLabelMapShell(repoPath string) map[string][]graph.Label {
+	labelMap := make(map[string][]graph.Label)
+
+	headResult, _ := gitcli.Run(repoPath, "symbolic-ref", "--short", "HEAD")
+	headBranch := strings.TrimSpace(headResult.Stdout)
+
+	// %(*objectname) is the peeled (commit) hash for annotated tags; empty otherwise
+	result, err := gitcli.Run(repoPath, "for-each-ref",
+		"--format=%(refname)\t%(objectname)\t%(*objectname)")
+	if err != nil {
+		return labelMap
+	}
+
+	for line := range strings.SplitSeq(strings.TrimSpace(result.Stdout), "\n") {
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, "\t", 3)
+		if len(parts) < 2 {
+			continue
+		}
+		refname := parts[0]
+		hash := parts[1]
+		if len(parts) == 3 && parts[2] != "" {
+			hash = parts[2]
+		}
+		if hash == "" {
+			continue
+		}
+
+		var label graph.Label
+		switch {
+		case strings.HasPrefix(refname, "refs/heads/"):
+			shortName := strings.TrimPrefix(refname, "refs/heads/")
+			if shortName == headBranch {
+				label = graph.Label{Name: shortName, Type: "head"}
+			} else {
+				label = graph.Label{Name: shortName, Type: "branch"}
+			}
+		case strings.HasPrefix(refname, "refs/remotes/"):
+			short := strings.TrimPrefix(refname, "refs/remotes/")
+			rparts := strings.SplitN(short, "/", 2)
+			if len(rparts) == 2 {
+				label = graph.Label{Name: rparts[1], Type: "remote", Remote: rparts[0]}
+			} else {
+				label = graph.Label{Name: short, Type: "remote"}
+			}
+		case strings.HasPrefix(refname, "refs/tags/"):
+			label = graph.Label{Name: strings.TrimPrefix(refname, "refs/tags/"), Type: "tag"}
+		default:
+			continue
+		}
+
+		labelMap[hash] = append(labelMap[hash], label)
+	}
+
+	return labelMap
+}
+
+
+const diffContextLines = 3
+
+type HunkLine struct {
+	Type    string `json:"type"`    // "add", "del", "context"
+	Content string `json:"content"`
+	OldLine int    `json:"oldLine"` // 0 for added lines
+	NewLine int    `json:"newLine"` // 0 for deleted lines
+}
+
+type Hunk struct {
+	Header string     `json:"header"`
+	Lines  []HunkLine `json:"lines"`
+}
+
+type FileDiff struct {
+	OldPath  string `json:"oldPath"`
+	NewPath  string `json:"newPath"`
+	Hunks    []Hunk `json:"hunks"`
+	IsBinary bool   `json:"isBinary"`
+}
+
+func (m *Manager) GetCommitDiff(repoPath, hash string) ([]FileDiff, error) {
+	r, err := m.Get(repoPath)
+	if err != nil {
+		return nil, err
+	}
+	diffs, err := getCommitDiffGoGit(r, hash)
+	if err != nil {
+		// go-git fails on repos with multi-pack-index or non-standard pack names
+		return getCommitDiffShell(repoPath, hash)
+	}
+	return diffs, nil
+}
+
+func getCommitDiffGoGit(r interface {
+	CommitObject(plumbing.Hash) (*object.Commit, error)
+}, hash string) ([]FileDiff, error) {
+	commit, err := r.CommitObject(plumbing.NewHash(hash))
+	if err != nil {
+		return nil, err
+	}
+
+	commitTree, err := commit.Tree()
+	if err != nil {
+		return nil, err
+	}
+
+	var parentTree *object.Tree
+	if commit.NumParents() > 0 {
+		parent, err := commit.Parent(0)
+		if err != nil {
+			return nil, err
+		}
+		parentTree, err = parent.Tree()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		parentTree = &object.Tree{}
+	}
+
+	changes, err := object.DiffTree(parentTree, commitTree)
+	if err != nil {
+		return nil, err
+	}
+
+	patch, err := changes.Patch()
+	if err != nil {
+		return nil, err
+	}
+
+	var diffs []FileDiff
+	for _, fp := range patch.FilePatches() {
+		from, to := fp.Files()
+		fd := FileDiff{Hunks: []Hunk{}, IsBinary: fp.IsBinary()}
+		if from != nil {
+			fd.OldPath = from.Path()
+		}
+		if to != nil {
+			fd.NewPath = to.Path()
+		}
+		if fd.NewPath == "" {
+			fd.NewPath = fd.OldPath
+		}
+		if !fp.IsBinary() {
+			fd.Hunks = buildHunks(fp)
+		}
+		diffs = append(diffs, fd)
+	}
+	if diffs == nil {
+		diffs = []FileDiff{}
+	}
+	return diffs, nil
+}
+
+func getCommitDiffShell(repoPath, hash string) ([]FileDiff, error) {
+	result, err := gitcli.Run(repoPath, "diff-tree", "--no-commit-id", "-p", "--root", "-U3", hash)
+	if err != nil {
+		return nil, fmt.Errorf("git diff-tree: %w", err)
+	}
+	return emptyIfNil(parseUnifiedDiff(result.Stdout)), nil
+}
+
+func buildHunks(fp gogitdiff.FilePatch) []Hunk {
+	type flatLine struct {
+		lineType string
+		content  string
+		oldLine  int
+		newLine  int
+	}
+
+	var flat []flatLine
+	oldLine, newLine := 1, 1
+
+	for _, chunk := range fp.Chunks() {
+		parts := strings.Split(chunk.Content(), "\n")
+		if len(parts) > 0 && parts[len(parts)-1] == "" {
+			parts = parts[:len(parts)-1]
+		}
+		switch chunk.Type() {
+		case gogitdiff.Equal:
+			for _, l := range parts {
+				flat = append(flat, flatLine{"context", l, oldLine, newLine})
+				oldLine++
+				newLine++
+			}
+		case gogitdiff.Add:
+			for _, l := range parts {
+				flat = append(flat, flatLine{"add", l, 0, newLine})
+				newLine++
+			}
+		case gogitdiff.Delete:
+			for _, l := range parts {
+				flat = append(flat, flatLine{"del", l, oldLine, 0})
+				oldLine++
+			}
+		}
+	}
+
+	var changeIdx []int
+	for i, l := range flat {
+		if l.lineType != "context" {
+			changeIdx = append(changeIdx, i)
+		}
+	}
+	if len(changeIdx) == 0 {
+		return nil
+	}
+
+	// Group change indices into windows, merging when gaps are ≤ 2*context.
+	type win struct{ start, end int }
+	var windows []win
+
+	gs, ge := changeIdx[0], changeIdx[0]
+	for _, idx := range changeIdx[1:] {
+		if idx-ge <= 2*diffContextLines {
+			ge = idx
+		} else {
+			windows = append(windows, win{max(0, gs-diffContextLines), min(len(flat)-1, ge+diffContextLines)})
+			gs, ge = idx, idx
+		}
+	}
+	windows = append(windows, win{max(0, gs-diffContextLines), min(len(flat)-1, ge+diffContextLines)})
+
+	hunks := make([]Hunk, 0, len(windows))
+	for _, w := range windows {
+		slice := flat[w.start : w.end+1]
+
+		oldStart, newStart, oldCount, newCount := 0, 0, 0, 0
+		for _, l := range slice {
+			if l.lineType != "add" {
+				if oldStart == 0 {
+					oldStart = l.oldLine
+				}
+				oldCount++
+			}
+			if l.lineType != "del" {
+				if newStart == 0 {
+					newStart = l.newLine
+				}
+				newCount++
+			}
+		}
+
+		hunkLines := make([]HunkLine, len(slice))
+		for i, l := range slice {
+			hunkLines[i] = HunkLine{Type: l.lineType, Content: l.content, OldLine: l.oldLine, NewLine: l.newLine}
+		}
+		header := fmt.Sprintf("@@ -%d,%d +%d,%d @@", oldStart, oldCount, newStart, newCount)
+		hunks = append(hunks, Hunk{Header: header, Lines: hunkLines})
+	}
+	return hunks
+}

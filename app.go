@@ -1,0 +1,212 @@
+package main
+
+import (
+	"context"
+	"os/exec"
+	"path/filepath"
+
+	"github.com/wailsapp/wails/v2/pkg/runtime"
+
+	"gitgood/internal/gitcli"
+	"gitgood/internal/graph"
+	"gitgood/internal/repo"
+)
+
+type App struct {
+	ctx     context.Context
+	manager *repo.Manager
+}
+
+func NewApp() *App {
+	return &App{
+		manager: repo.NewManager(),
+	}
+}
+
+func (a *App) startup(ctx context.Context) {
+	a.ctx = ctx
+}
+
+func (a *App) OpenRepository(path string) error {
+	if err := a.manager.Open(path); err != nil {
+		return err
+	}
+	abs, _ := filepath.Abs(path)
+	_ = repo.SaveRecentRepo(abs)
+	return nil
+}
+
+func (a *App) CloseRepository(path string) {
+	a.manager.Close(path)
+}
+
+func (a *App) ListOpenRepositories() []string {
+	return a.manager.OpenPaths()
+}
+
+type RecentRepo struct {
+	Path string `json:"path"`
+	Name string `json:"name"`
+}
+
+func (a *App) ListRecentRepositories() ([]RecentRepo, error) {
+	entries, err := repo.LoadRecentRepos()
+	if err != nil {
+		return nil, err
+	}
+	result := make([]RecentRepo, len(entries))
+	for i, e := range entries {
+		result[i] = RecentRepo{Path: e.Path, Name: e.Name}
+	}
+	return result, nil
+}
+
+func (a *App) ListBranches(repoPath string) ([]repo.BranchInfo, error) {
+	return a.manager.ListBranches(repoPath)
+}
+
+func (a *App) GetAheadBehind(repoPath string) (repo.AheadBehind, error) {
+	return a.manager.GetAheadBehind(repoPath)
+}
+
+func (a *App) PickDirectory() (string, error) {
+	return runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Open Repository",
+	})
+}
+
+func (a *App) GetCommitGraph(repoPath string, limit int) ([]graph.GraphRow, error) {
+	return a.manager.GetCommitGraph(repoPath, limit)
+}
+
+func (a *App) GetCommitDiff(repoPath, hash string) ([]repo.FileDiff, error) {
+	return a.manager.GetCommitDiff(repoPath, hash)
+}
+
+func (a *App) GetStatus(repoPath string) ([]repo.FileStatus, error) {
+	return a.manager.GetStatus(repoPath)
+}
+
+func (a *App) GetWorkingDiff(repoPath, path string, staged bool) ([]repo.FileDiff, error) {
+	return a.manager.GetWorkingDiff(repoPath, path, staged)
+}
+
+func (a *App) StageFile(repoPath, path string) error {
+	return a.manager.StageFile(repoPath, path)
+}
+
+func (a *App) UnstageFile(repoPath, path string) error {
+	return a.manager.UnstageFile(repoPath, path)
+}
+
+func (a *App) StageHunk(repoPath, patch string) error {
+	return a.manager.StageHunk(repoPath, patch)
+}
+
+func (a *App) UnstageHunk(repoPath, patch string) error {
+	return a.manager.UnstageHunk(repoPath, patch)
+}
+
+func (a *App) DiscardFile(repoPath, path string) error {
+	return a.manager.DiscardFile(repoPath, path)
+}
+
+func (a *App) FetchAll(repoPath string) error {
+	return a.manager.FetchAll(repoPath)
+}
+
+func (a *App) PullBranch(repoPath string) error {
+	return a.manager.PullBranch(repoPath)
+}
+
+func (a *App) PushBranch(repoPath string) error {
+	return a.manager.PushBranch(repoPath)
+}
+
+func (a *App) Stash(repoPath string) error {
+	return a.manager.Stash(repoPath)
+}
+
+func (a *App) StashPop(repoPath string) error {
+	return a.manager.StashPop(repoPath)
+}
+
+func (a *App) CreateBranch(repoPath, name string) error {
+	return a.manager.CreateBranch(repoPath, name)
+}
+
+func (a *App) OpenTerminal(repoPath string) error {
+	return exec.Command("open", "-a", "Terminal", repoPath).Start()
+}
+
+func (a *App) Commit(repoPath, message string, amend bool) error {
+	return a.manager.Commit(repoPath, message, amend)
+}
+
+func (a *App) GetLastCommitSubject(repoPath string) (string, error) {
+	return a.manager.GetLastCommitSubject(repoPath)
+}
+
+func (a *App) CheckoutRef(repoPath, ref string) error {
+	return gitcli.CheckoutRef(repoPath, ref)
+}
+
+func (a *App) CreateBranchAt(repoPath, name, hash string) error {
+	return gitcli.CreateBranchAt(repoPath, name, hash)
+}
+
+func (a *App) RevertCommit(repoPath, hash string, commitImmediately bool) error {
+	return gitcli.RevertCommit(repoPath, hash, commitImmediately)
+}
+
+func (a *App) CreateTag(repoPath, name, hash string) error {
+	return gitcli.CreateTag(repoPath, name, hash)
+}
+
+func (a *App) ResetBranch(repoPath, hash, mode string) error {
+	return gitcli.ResetBranch(repoPath, hash, mode)
+}
+
+func (a *App) IsInMerge(repoPath string) (bool, error) {
+	return a.manager.IsInMerge(repoPath)
+}
+
+func (a *App) GetMergeMessage(repoPath string) (string, error) {
+	return a.manager.GetMergeMessage(repoPath)
+}
+
+func (a *App) GetConflictContent(repoPath, path string) (repo.ConflictContent, error) {
+	return a.manager.GetConflictContent(repoPath, path)
+}
+
+func (a *App) ResolveConflict(repoPath, path, content string) error {
+	return a.manager.ResolveConflict(repoPath, path, content)
+}
+
+func (a *App) AbortMerge(repoPath string) error {
+	return a.manager.AbortMerge(repoPath)
+}
+
+func (a *App) SwitchBranch(repoPath, target string, trackRemote bool) (repo.SwitchResult, error) {
+	return a.manager.SwitchBranch(repoPath, target, trackRemote)
+}
+
+func (a *App) IsInRebase(repoPath string) (bool, error) {
+	return a.manager.IsInRebase(repoPath)
+}
+
+func (a *App) GetRebaseState(repoPath string) (repo.RebaseState, error) {
+	return a.manager.GetRebaseState(repoPath)
+}
+
+func (a *App) StartRebase(repoPath, onto string) error {
+	return a.manager.StartRebase(repoPath, onto)
+}
+
+func (a *App) ContinueRebase(repoPath string) error {
+	return a.manager.ContinueRebase(repoPath)
+}
+
+func (a *App) AbortRebase(repoPath string) error {
+	return a.manager.AbortRebase(repoPath)
+}

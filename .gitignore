@@ -1,0 +1,21 @@
+# Build output
+build/bin
+build/darwin
+build/windows
+
+# Frontend
+node_modules
+frontend/dist
+frontend/node_modules
+
+# Go
+*.test
+*.out
+
+# macOS
+.DS_Store
+
+# IDE
+.idea
+.vscode
+*.swp
