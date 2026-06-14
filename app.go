@@ -28,6 +28,17 @@ func NewApp() *App {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	if prefs, err := repo.LoadWindowPrefs(); err == nil && prefs != nil {
+		runtime.WindowSetSize(ctx, prefs.Width, prefs.Height)
+		runtime.WindowSetPosition(ctx, prefs.X, prefs.Y)
+	}
+}
+
+func (a *App) beforeClose(ctx context.Context) bool {
+	w, h := runtime.WindowGetSize(ctx)
+	x, y := runtime.WindowGetPosition(ctx)
+	_ = repo.SaveWindowPrefs(w, h, x, y)
+	return false
 }
 
 func (a *App) OpenRepository(path string) error {
