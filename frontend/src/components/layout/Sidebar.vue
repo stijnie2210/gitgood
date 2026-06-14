@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { watch, ref, nextTick, onMounted, onUnmounted } from 'vue'
+import { clampMenuPosition } from '../../composables/useContextMenu'
 import { useReposStore } from '../../stores/repos'
 import { useBranchesStore } from '../../stores/branches'
 import { useCommitsStore } from '../../stores/commits'
@@ -16,19 +17,26 @@ const toast = useToastStore()
 watch(
   () => repos.activeRepo?.path,
   path => {
-    if (path) branches.load(path)
-    else branches.clear()
+    if (path) {
+      branches.load(path)
+    } else {
+      branches.clear()
+    }
   },
   { immediate: true }
 )
 
 async function switchTo(target: string, trackRemote: boolean) {
   const repoPath = repos.activeRepo?.path
-  if (!repoPath) return
+  if (!repoPath) {
+    return
+  }
 
   if (!trackRemote) {
     const current = branches.local.find(b => b.isCurrent)
-    if (current?.name === target) return
+    if (current?.name === target) {
+      return
+    }
   }
 
   try {
@@ -66,10 +74,16 @@ interface CtxMenu {
 const ctxMenu = ref<CtxMenu | null>(null)
 const renameInputRef = ref<HTMLInputElement | null>(null)
 
-function openCtxMenu(e: MouseEvent, target: string, label: string, isLocal: boolean, isCurrent: boolean) {
+async function openCtxMenu(e: MouseEvent, target: string, label: string, isLocal: boolean, isCurrent: boolean) {
   e.preventDefault()
   e.stopPropagation()
   ctxMenu.value = { x: e.clientX, y: e.clientY, target, label, isLocal, isCurrent, mode: 'default', renameValue: label }
+  await nextTick()
+  const menu = document.getElementById('branch-ctx-menu')
+  if (menu && ctxMenu.value) {
+    const { x, y } = clampMenuPosition(menu, e.clientX, e.clientY)
+    ctxMenu.value = { ...ctxMenu.value, x, y }
+  }
 }
 
 function closeCtxMenu() {
@@ -89,7 +103,9 @@ onUnmounted(() => window.removeEventListener('mousedown', onWindowMouseDown))
 async function rebaseOnto(target: string) {
   closeCtxMenu()
   const repoPath = repos.activeRepo?.path
-  if (!repoPath) return
+  if (!repoPath) {
+    return
+  }
   try {
     await StartRebase(repoPath, target)
     await Promise.all([branches.load(repoPath), commits.load(repoPath), staging.load(repoPath)])
@@ -110,7 +126,9 @@ async function pushBranch() {
   const menu = ctxMenu.value
   const repoPath = repos.activeRepo?.path
   closeCtxMenu()
-  if (!menu || !repoPath) return
+  if (!menu || !repoPath) {
+    return
+  }
   try {
     await PushNamedBranch(repoPath, menu.target)
     toast.success('Pushed ' + menu.label)
@@ -122,13 +140,17 @@ async function pushBranch() {
 async function copyBranchName() {
   const menu = ctxMenu.value
   closeCtxMenu()
-  if (!menu) return
+  if (!menu) {
+    return
+  }
   await navigator.clipboard.writeText(menu.label)
   toast.success('Copied: ' + menu.label)
 }
 
 function startRename() {
-  if (!ctxMenu.value) return
+  if (!ctxMenu.value) {
+    return
+  }
   ctxMenu.value.mode = 'rename'
   ctxMenu.value.renameValue = ctxMenu.value.target
   nextTick(() => {
@@ -139,9 +161,15 @@ function startRename() {
 async function confirmRename() {
   const menu = ctxMenu.value
   const repoPath = repos.activeRepo?.path
-  if (!menu || !repoPath) { closeCtxMenu(); return }
+  if (!menu || !repoPath) {
+    closeCtxMenu()
+    return
+  }
   const newName = menu.renameValue.trim()
-  if (!newName || newName === menu.target) { closeCtxMenu(); return }
+  if (!newName || newName === menu.target) {
+    closeCtxMenu()
+    return
+  }
   closeCtxMenu()
   try {
     await RenameBranch(repoPath, menu.target, newName)
@@ -153,7 +181,9 @@ async function confirmRename() {
 }
 
 function startDelete() {
-  if (!ctxMenu.value) return
+  if (!ctxMenu.value) {
+    return
+  }
   ctxMenu.value.mode = 'confirm-delete'
 }
 
@@ -161,7 +191,9 @@ async function confirmDelete(force: boolean) {
   const menu = ctxMenu.value
   const repoPath = repos.activeRepo?.path
   closeCtxMenu()
-  if (!menu || !repoPath) return
+  if (!menu || !repoPath) {
+    return
+  }
   try {
     await DeleteBranch(repoPath, menu.target, force)
     await branches.load(repoPath)

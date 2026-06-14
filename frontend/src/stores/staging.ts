@@ -30,8 +30,12 @@ export function buildHunkPatch(path: string, hunk: Hunk): string {
     `+++ b/${path}`,
     hunk.header,
     ...hunk.lines.map(l => {
-      if (l.type === 'add') return `+${l.content}`
-      if (l.type === 'del') return `-${l.content}`
+      if (l.type === 'add') {
+        return `+${l.content}`
+      }
+      if (l.type === 'del') {
+        return `-${l.content}`
+      }
       return ` ${l.content}`
     }),
   ]
@@ -71,7 +75,9 @@ export const useStagingStore = defineStore('staging', () => {
   const totalChanges = computed(() => files.value.length)
 
   async function load(repoPath: string) {
-    if (!repoPath) return
+    if (!repoPath) {
+      return
+    }
     loading.value = true
     try {
       const [statusResult, mergeState, mergeMsg, rebaseActive, rebaseInfo] = await Promise.all([
@@ -106,17 +112,11 @@ export const useStagingStore = defineStore('staging', () => {
   async function stageFile(repoPath: string, path: string) {
     await StageFile(repoPath, path)
     await load(repoPath)
-    if (selectedPath.value === path) {
-      await selectFile(repoPath, path, 'staged')
-    }
   }
 
   async function unstageFile(repoPath: string, path: string) {
     await UnstageFile(repoPath, path)
     await load(repoPath)
-    if (selectedPath.value === path) {
-      await selectFile(repoPath, path, 'unstaged')
-    }
   }
 
   async function stageHunk(repoPath: string, path: string, hunk: Hunk) {

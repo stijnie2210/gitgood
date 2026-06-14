@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, nextTick, onMounted, onUnmounted } from 'vue'
+import { clampMenuPosition } from '../../composables/useContextMenu'
 import type { GraphRow } from '../../stores/commits'
 import { useToastStore } from '../../stores/toast'
 import {
@@ -30,18 +31,13 @@ const inputVal = ref('')
 const inputEl = ref<HTMLInputElement | null>(null)
 const menuEl = ref<HTMLElement | null>(null)
 
-// Clamp position so menu doesn't overflow viewport
 const style = ref({ top: '0px', left: '0px' })
 
 onMounted(() => {
   const el = menuEl.value
   if (!el) return
-  const vw = window.innerWidth
-  const vh = window.innerHeight
-  const rect = el.getBoundingClientRect()
-  const left = props.x + rect.width > vw ? props.x - rect.width : props.x
-  const top  = props.y + rect.height > vh ? props.y - rect.height : props.y
-  style.value = { top: `${Math.max(0, top)}px`, left: `${Math.max(0, left)}px` }
+  const { x, y } = clampMenuPosition(el, props.x, props.y)
+  style.value = { top: `${y}px`, left: `${x}px` }
 
   document.addEventListener('mousedown', onOutside, true)
   document.addEventListener('keydown', onKey, true)

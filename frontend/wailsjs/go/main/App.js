@@ -10,6 +10,10 @@ export function AbortRebase(arg1) {
   return window['go']['main']['App']['AbortRebase'](arg1);
 }
 
+export function AppendToGitignore(arg1, arg2) {
+  return window['go']['main']['App']['AppendToGitignore'](arg1, arg2);
+}
+
 export function CheckoutRef(arg1, arg2) {
   return window['go']['main']['App']['CheckoutRef'](arg1, arg2);
 }
@@ -42,6 +46,10 @@ export function DeleteBranch(arg1, arg2, arg3) {
   return window['go']['main']['App']['DeleteBranch'](arg1, arg2, arg3);
 }
 
+export function DeleteWorkingFile(arg1, arg2) {
+  return window['go']['main']['App']['DeleteWorkingFile'](arg1, arg2);
+}
+
 export function DiscardFile(arg1, arg2) {
   return window['go']['main']['App']['DiscardFile'](arg1, arg2);
 }
@@ -64,6 +72,10 @@ export function GetCommitGraph(arg1, arg2) {
 
 export function GetConflictContent(arg1, arg2) {
   return window['go']['main']['App']['GetConflictContent'](arg1, arg2);
+}
+
+export function GetFileBase64(arg1, arg2) {
+  return window['go']['main']['App']['GetFileBase64'](arg1, arg2);
 }
 
 export function GetLastCommitSubject(arg1) {
@@ -106,6 +118,14 @@ export function ListRecentRepositories() {
   return window['go']['main']['App']['ListRecentRepositories']();
 }
 
+export function OpenInDefaultApp(arg1, arg2) {
+  return window['go']['main']['App']['OpenInDefaultApp'](arg1, arg2);
+}
+
+export function OpenInEditor(arg1, arg2) {
+  return window['go']['main']['App']['OpenInEditor'](arg1, arg2);
+}
+
 export function OpenRepository(arg1) {
   return window['go']['main']['App']['OpenRepository'](arg1);
 }
@@ -146,6 +166,14 @@ export function RevertCommit(arg1, arg2, arg3) {
   return window['go']['main']['App']['RevertCommit'](arg1, arg2, arg3);
 }
 
+export function SavePatchFile(arg1, arg2) {
+  return window['go']['main']['App']['SavePatchFile'](arg1, arg2);
+}
+
+export function ShowInFinder(arg1, arg2) {
+  return window['go']['main']['App']['ShowInFinder'](arg1, arg2);
+}
+
 export function StageFile(arg1, arg2) {
   return window['go']['main']['App']['StageFile'](arg1, arg2);
 }
@@ -160,6 +188,10 @@ export function StartRebase(arg1, arg2) {
 
 export function Stash(arg1) {
   return window['go']['main']['App']['Stash'](arg1);
+}
+
+export function StashFile(arg1, arg2) {
+  return window['go']['main']['App']['StashFile'](arg1, arg2);
 }
 
 export function StashPop(arg1) {

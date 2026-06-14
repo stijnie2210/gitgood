@@ -8,6 +8,8 @@ export function AbortMerge(arg1:string):Promise<void>;
 
 export function AbortRebase(arg1:string):Promise<void>;
 
+export function AppendToGitignore(arg1:string,arg2:string):Promise<void>;
+
 export function CheckoutRef(arg1:string,arg2:string):Promise<void>;
 
 export function CloseRepository(arg1:string):Promise<void>;
@@ -24,6 +26,8 @@ export function CreateTag(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function DeleteBranch(arg1:string,arg2:string,arg3:boolean):Promise<void>;
 
+export function DeleteWorkingFile(arg1:string,arg2:string):Promise<void>;
+
 export function DiscardFile(arg1:string,arg2:string):Promise<void>;
 
 export function FetchAll(arg1:string):Promise<void>;
@@ -35,6 +39,8 @@ export function GetCommitDiff(arg1:string,arg2:string):Promise<Array<repo.FileDi
 export function GetCommitGraph(arg1:string,arg2:number):Promise<Array<graph.GraphRow>>;
 
 export function GetConflictContent(arg1:string,arg2:string):Promise<repo.ConflictContent>;
+
+export function GetFileBase64(arg1:string,arg2:string):Promise<string>;
 
 export function GetLastCommitSubject(arg1:string):Promise<string>;
 
@@ -56,6 +62,10 @@ export function ListOpenRepositories():Promise<Array<string>>;
 
 export function ListRecentRepositories():Promise<Array<main.RecentRepo>>;
 
+export function OpenInDefaultApp(arg1:string,arg2:string):Promise<void>;
+
+export function OpenInEditor(arg1:string,arg2:string):Promise<void>;
+
 export function OpenRepository(arg1:string):Promise<void>;
 
 export function OpenTerminal(arg1:string):Promise<void>;
@@ -76,6 +86,10 @@ export function ResolveConflict(arg1:string,arg2:string,arg3:string):Promise<voi
 
 export function RevertCommit(arg1:string,arg2:string,arg3:boolean):Promise<void>;
 
+export function SavePatchFile(arg1:string,arg2:string):Promise<void>;
+
+export function ShowInFinder(arg1:string,arg2:string):Promise<void>;
+
 export function StageFile(arg1:string,arg2:string):Promise<void>;
 
 export function StageHunk(arg1:string,arg2:string):Promise<void>;
@@ -83,6 +97,8 @@ export function StageHunk(arg1:string,arg2:string):Promise<void>;
 export function StartRebase(arg1:string,arg2:string):Promise<void>;
 
 export function Stash(arg1:string):Promise<void>;
+
+export function StashFile(arg1:string,arg2:string):Promise<void>;
 
 export function StashPop(arg1:string):Promise<void>;
 

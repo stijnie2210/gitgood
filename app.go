@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
+	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 
@@ -221,4 +224,57 @@ func (a *App) RenameBranch(repoPath, oldName, newName string) error {
 
 func (a *App) PushNamedBranch(repoPath, name string) error {
 	return gitcli.PushNamedBranch(repoPath, name)
+}
+
+func (a *App) GetFileBase64(repoPath, filePath string) (string, error) {
+	data, err := os.ReadFile(filepath.Join(repoPath, filePath))
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(data), nil
+}
+
+func (a *App) OpenInDefaultApp(repoPath, filePath string) error {
+	return gitcli.OpenInDefaultApp(repoPath, filePath)
+}
+
+func (a *App) ShowInFinder(repoPath, filePath string) error {
+	return gitcli.ShowInFinder(repoPath, filePath)
+}
+
+func (a *App) OpenInEditor(repoPath, filePath string) error {
+	return gitcli.OpenInEditor(repoPath, filePath)
+}
+
+func (a *App) StashFile(repoPath, filePath string) error {
+	return gitcli.StashFile(repoPath, filePath)
+}
+
+func (a *App) AppendToGitignore(repoPath, pattern string) error {
+	return gitcli.AppendToGitignore(repoPath, pattern)
+}
+
+func (a *App) SavePatchFile(repoPath, filePath string) error {
+	patch, err := gitcli.GetFilePatch(repoPath, filePath)
+	if err != nil {
+		return err
+	}
+	if patch == "" {
+		return fmt.Errorf("no changes to patch")
+	}
+	savePath, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           "Save patch",
+		DefaultFilename: filepath.Base(filePath) + ".patch",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Patch files (*.patch)", Pattern: "*.patch"},
+		},
+	})
+	if err != nil || savePath == "" {
+		return nil
+	}
+	return os.WriteFile(savePath, []byte(patch), 0644)
+}
+
+func (a *App) DeleteWorkingFile(repoPath, filePath string) error {
+	return gitcli.DeleteWorkingFile(repoPath, filePath)
 }

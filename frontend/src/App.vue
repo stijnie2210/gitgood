@@ -10,6 +10,7 @@ import ToastStack from './components/layout/ToastStack.vue'
 import { useReposStore } from './stores/repos'
 import { useCommitsStore } from './stores/commits'
 import { useStagingStore } from './stores/staging'
+import logoUrl from './assets/images/logo-icon.png'
 
 const repos = useReposStore()
 const commits = useCommitsStore()
@@ -73,7 +74,8 @@ const startDetailResize = makeResizer(detailWidth, 200, 800, 'left')
       <div class="resize-handle" @mousedown.prevent="startSidebarResize" />
       <main class="main-panel">
         <div v-if="!repos.activeRepo" class="welcome">
-          <h1>gitgood</h1>
+          <img :src="logoUrl" class="welcome-logo" alt="" />
+          <h1 class="welcome-brand">git<span>good</span></h1>
           <p>Open a repository to get started.</p>
           <button @click="repos.pickAndOpen()">Open Repository</button>
 
@@ -216,7 +218,9 @@ body { background: #0f0f1a; color: #e0e0e0; font-family: -apple-system, BlinkMac
   color: #666;
 }
 
-.welcome h1 { font-size: 32px; color: #4f8ef7; font-weight: 700; }
+.welcome-logo { width: 160px; }
+.welcome-brand { font-size: 32px; font-weight: 700; color: #4f8ef7; margin-top: -4px; }
+.welcome-brand span { color: #ccc; font-weight: 400; }
 .welcome p { font-size: 15px; }
 
 .welcome button {

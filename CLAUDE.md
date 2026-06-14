@@ -2,6 +2,12 @@
 
 GitKraken replacement. Single-binary desktop app: **Wails v2** (Go backend + Vue 3 frontend, no HTTP server, direct Go↔Vue bindings via auto-generated TypeScript).
 
+## Code style
+
+Write no comments by default. Only add one when the WHY is non-obvious: a hidden constraint, a subtle invariant, a workaround for a specific bug, or behaviour that would surprise a reader. Never describe what the code does — well-named identifiers do that. No multi-line docstrings or block comments.
+
+Always use braces for if statements — never single-line `if (x) return` or `if (x) doThing()`.
+
 ## Commands
 
 ```bash
@@ -41,6 +47,8 @@ internal/gitcli/
   runner.go                         Run() / RunWithInput() — exec.Command wrapper
   staging.go                        StageFile, UnstageFile, ApplyPatch, DiscardFile
   remote.go                         FetchAll, Pull, Push
+  fileops.go                        OpenInDefaultApp, ShowInFinder, OpenInEditor,
+                                    StashFile, AppendToGitignore, GetFilePatch, DeleteWorkingFile
 internal/repo/
   manager.go                        Manager{map[string]*git.Repository}; Open/Close/Get
                                     RecentEntry → ~/Library/Application Support/gitgood/repos.json
@@ -57,6 +65,8 @@ internal/graph/
 frontend/src/
   App.vue                           Root: TabBar + resizable Sidebar + main panel
                                     viewMode ref ('commits'|'staging') — view tab switcher
+  composables/
+    useContextMenu.ts               clampMenuPosition(el, x, y) — shared viewport clamping for all context menus
   stores/
     repos.ts                        tabs[], activeRepo, openRepo, pickAndOpen, closeTab
     branches.ts                     local[], remote[] — loaded on activeRepo change
@@ -69,8 +79,11 @@ frontend/src/
     graph/CommitGraph.vue           @tanstack/vue-virtual virtualizer; canvas-per-row
     graph/CommitRow.vue             Single row: canvas + shortHash + labels + subject
     graph/CommitDetail.vue          Commit diff view; collapsible files; hunk display
+    graph/CommitContextMenu.vue     Right-click menu for commits; self-clamps via clampMenuPosition in onMounted
     graph/graphRenderer.ts          drawGraphCell() — CELL_W=14, bezier curves for diagonals
     staging/StagingView.vue         File list (unstaged/staged/conflicts) + merge banner + ConflictView/HunkSelector
+                                    Arrow key navigation across all three file sections
+                                    Right-click context menu (teleported); image preview for image file types
     staging/HunkSelector.vue        Per-hunk Stage/Unstage buttons; reuses same diff-line CSS
     staging/ConflictView.vue        Conflict resolution: parse markers → per-conflict Accept Ours/Theirs
 ```
@@ -106,8 +119,9 @@ Background hierarchy: `#0a0a14` (deepest) → `#0f0f1a` → `#0d0d18` → `#1111
 - **Phase 3** ✅ — Working tree status/diff, stage/unstage files and hunks, fetch/pull, Staging view
 - **Phase 4** ✅ — Conflict resolution: merge banner, conflicted file list, ConflictView (Accept Ours/Theirs per chunk), AbortMerge, merge message pre-fill
 - **Phase 5** ✅ — Rebasing: StartRebase/ContinueRebase/AbortRebase, rebase banner in Working Tree, conflict resolution reuses ConflictView, sidebar branch context menu "Rebase onto X"
-- **Phase 6A** 🔄 — Branch context menu (quick wins): Delete branch, Rename branch, Copy branch name, Push branch
+- **Phase 6A** ✅ — Branch context menu: Delete, Rename, Copy name, Push; file context menu in Working Tree (Stage/Discard/Ignore/Stash/Open/Finder/Editor/Copy path/Save patch/Delete)
 - **Phase 6B** ⬜ — Branch context menu (medium): Create branch from here, Merge into current, Set upstream, Create tag here
+- **Phase 6C** ⬜ — Working tree extras: arrow key navigation ✅, image preview ✅; HTTPS auth via go-keyring for push/pull on private repos
 
 ### Conflict resolution flow (`internal/repo/conflict.go`)
 `IsInMerge()` checks for `MERGE_HEAD` / `CHERRY_PICK_HEAD`. `GetConflictContent()` calls `git show :1:/:2:/:3:` for base/ours/theirs plus reads the working file (with markers). `ResolveConflict()` writes the file and stages it. `AbortMerge()` runs `git merge --abort`.
@@ -117,9 +131,14 @@ Frontend parses `<<<<<<< / ======= / >>>>>>>` markers into context + conflict ch
 ### Rebase flow (`internal/gitcli/rebase.go`)
 `StartRebase(onto)` → `git rebase <onto>`. `ContinueRebase()` → `git rebase --continue`. `AbortRebase()` → `git rebase --abort`. Working Tree view shows a rebase banner with step/total progress, reuses ConflictView for mid-rebase conflicts.
 
-### Branch context menu (Phase 6A/6B, `Sidebar.vue` + `internal/gitcli/branches.go`)
-Context menu is teleported to `<body>` to escape sidebar overflow clipping. Positioned via `getBoundingClientRect()`.
+### Context menu pattern
+All context menus are teleported to `<body>` to escape overflow clipping. Position clamping is shared via `composables/useContextMenu.ts`:
+- `Sidebar.vue` / `StagingView.vue`: set position on open, then `await nextTick()` + `clampMenuPosition(getElementById(...), x, y)` to update
+- `CommitContextMenu.vue`: self-contained component; clamps in `onMounted` using a `menuEl` ref
+- Multi-mode menus use a `mode` ref (`'default' | 'ignore' | 'confirm-delete'` etc.) to render different states inside the same positioned div — avoids closing/reopening for confirmation flows
+- Global `.ctx-menu` / `.ctx-menu-item` / `.ctx-menu-divider` styles live in an unscoped `<style>` block in `Sidebar.vue`
 
+### Branch context menu (`Sidebar.vue` + `internal/gitcli/branches.go`)
 **Phase 6A** items (all gitcli shell-outs):
 - **Delete**: `git branch -d <name>`; on failure offer force-delete (`-D`) via confirmation
 - **Rename**: `git branch -m <old> <new>`; name input via inline prompt
@@ -131,6 +150,20 @@ Context menu is teleported to `<body>` to escape sidebar overflow clipping. Posi
 - **Merge into current**: `git merge <branch>` — conflicts land in Working Tree view
 - **Set upstream**: `git branch --set-upstream-to=origin/<name>`
 - **Create tag**: `git tag <name> <hash>` — needs name input modal
+
+### Working tree file context menu (`StagingView.vue` + `internal/gitcli/fileops.go`)
+Right-click on any file item (conflicts, unstaged, staged). Items are contextual per section:
+- **Unstaged**: Stage, Discard, Ignore (submenu: file/ext/folder → AppendToGitignore), Stash file, Open in default app, Show in Finder, Open in editor, Copy path, Save patch (runtime.SaveFileDialog), Delete (confirm-delete mode)
+- **Staged**: Unstage, then common items
+- **Conflict**: common items only
+`OpenInEditor` checks `$VISUAL` then `$EDITOR` env vars, falls back to `open`.
+`SavePatchFile` tries `git diff --`, then `git diff --cached --`, then `--no-index /dev/null` for untracked files.
+
+### Image preview (`StagingView.vue` + `app.go`)
+`GetFileBase64(repoPath, filePath)` reads the file and returns base64. Frontend detects image extensions (png, jpg, jpeg, gif, webp, svg, bmp, ico, tiff, avif) via `isImageFile()`, builds a `data:<mime>;base64,<b64>` src, and shows `<img>` instead of HunkSelector. Watches `[selectedPath, selectedMode]` to reload.
+
+### Arrow key navigation (`StagingView.vue`)
+`navigableFiles` computed flattens conflicts → unstaged → staged into a single list. Document-level `keydown` handler (added in `onMounted`, removed in `onUnmounted`) calls `navigateTo(±1)`, skipping events when `e.target` is an input or textarea. After selection, `scrollIntoView({ block: 'nearest' })` runs in `nextTick`.
 
 ## Pending Small Items
 
