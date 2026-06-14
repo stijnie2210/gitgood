@@ -210,3 +210,15 @@ func (a *App) ContinueRebase(repoPath string) error {
 func (a *App) AbortRebase(repoPath string) error {
 	return a.manager.AbortRebase(repoPath)
 }
+
+func (a *App) DeleteBranch(repoPath, name string, force bool) error {
+	return gitcli.DeleteBranch(repoPath, name, force)
+}
+
+func (a *App) RenameBranch(repoPath, oldName, newName string) error {
+	return gitcli.RenameBranch(repoPath, oldName, newName)
+}
+
+func (a *App) PushNamedBranch(repoPath, name string) error {
+	return gitcli.PushNamedBranch(repoPath, name)
+}

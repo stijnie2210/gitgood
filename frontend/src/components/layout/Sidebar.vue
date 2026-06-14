@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { watch, ref, onMounted, onUnmounted } from 'vue'
+import { watch, ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { useReposStore } from '../../stores/repos'
 import { useBranchesStore } from '../../stores/branches'
 import { useCommitsStore } from '../../stores/commits'
 import { useStagingStore } from '../../stores/staging'
 import { useToastStore } from '../../stores/toast'
-import { StartRebase } from '../../../wailsjs/go/main/App'
+import { StartRebase, DeleteBranch, RenameBranch, PushNamedBranch } from '../../../wailsjs/go/main/App'
 
 const repos = useReposStore()
 const branches = useBranchesStore()
@@ -50,19 +50,26 @@ async function switchTo(target: string, trackRemote: boolean) {
 
 // ── Context menu ──────────────────────────────────────────────────────────
 
+type CtxMode = 'default' | 'rename' | 'confirm-delete'
+
 interface CtxMenu {
   x: number
   y: number
-  target: string  // "branchName" or "remote/branchName"
-  label: string   // display label
+  target: string
+  label: string
+  isLocal: boolean
+  isCurrent: boolean
+  mode: CtxMode
+  renameValue: string
 }
 
 const ctxMenu = ref<CtxMenu | null>(null)
+const renameInputRef = ref<HTMLInputElement | null>(null)
 
-function openCtxMenu(e: MouseEvent, target: string, label: string) {
+function openCtxMenu(e: MouseEvent, target: string, label: string, isLocal: boolean, isCurrent: boolean) {
   e.preventDefault()
   e.stopPropagation()
-  ctxMenu.value = { x: e.clientX, y: e.clientY, target, label }
+  ctxMenu.value = { x: e.clientX, y: e.clientY, target, label, isLocal, isCurrent, mode: 'default', renameValue: label }
 }
 
 function closeCtxMenu() {
@@ -85,19 +92,86 @@ async function rebaseOnto(target: string) {
   if (!repoPath) return
   try {
     await StartRebase(repoPath, target)
-    // Clean rebase — no conflicts
     await Promise.all([branches.load(repoPath), commits.load(repoPath), staging.load(repoPath)])
     toast.success('Rebased onto ' + target)
   } catch {
-    // May be a conflict stop — reload staging and check
     await staging.load(repoPath)
     if (staging.isInRebase) {
       await Promise.all([branches.load(repoPath), commits.load(repoPath)])
-      toast.success('Rebase started — switch to Staging to resolve conflicts')
+      toast.success('Rebase started — switch to Working Tree to resolve conflicts')
     } else {
-      // Real failure: re-throw message
       await staging.load(repoPath)
-      toast.error('Rebase failed — check Staging view for details')
+      toast.error('Rebase failed — check Working Tree view for details')
+    }
+  }
+}
+
+async function pushBranch() {
+  const menu = ctxMenu.value
+  const repoPath = repos.activeRepo?.path
+  closeCtxMenu()
+  if (!menu || !repoPath) return
+  try {
+    await PushNamedBranch(repoPath, menu.target)
+    toast.success('Pushed ' + menu.label)
+  } catch (e: unknown) {
+    toast.error(String(e))
+  }
+}
+
+async function copyBranchName() {
+  const menu = ctxMenu.value
+  closeCtxMenu()
+  if (!menu) return
+  await navigator.clipboard.writeText(menu.label)
+  toast.success('Copied: ' + menu.label)
+}
+
+function startRename() {
+  if (!ctxMenu.value) return
+  ctxMenu.value.mode = 'rename'
+  ctxMenu.value.renameValue = ctxMenu.value.target
+  nextTick(() => {
+    renameInputRef.value?.select()
+  })
+}
+
+async function confirmRename() {
+  const menu = ctxMenu.value
+  const repoPath = repos.activeRepo?.path
+  if (!menu || !repoPath) { closeCtxMenu(); return }
+  const newName = menu.renameValue.trim()
+  if (!newName || newName === menu.target) { closeCtxMenu(); return }
+  closeCtxMenu()
+  try {
+    await RenameBranch(repoPath, menu.target, newName)
+    await branches.load(repoPath)
+    toast.success('Renamed to ' + newName)
+  } catch (e: unknown) {
+    toast.error(String(e))
+  }
+}
+
+function startDelete() {
+  if (!ctxMenu.value) return
+  ctxMenu.value.mode = 'confirm-delete'
+}
+
+async function confirmDelete(force: boolean) {
+  const menu = ctxMenu.value
+  const repoPath = repos.activeRepo?.path
+  closeCtxMenu()
+  if (!menu || !repoPath) return
+  try {
+    await DeleteBranch(repoPath, menu.target, force)
+    await branches.load(repoPath)
+    toast.success('Deleted ' + menu.label)
+  } catch (e: unknown) {
+    const msg = String(e)
+    if (!force && msg.toLowerCase().includes('not fully merged')) {
+      toast.error('"' + menu.label + '" is not fully merged. Use force delete if you\'re sure.')
+    } else {
+      toast.error(msg)
     }
   }
 }
@@ -119,9 +193,9 @@ async function rebaseOnto(target: string) {
             :key="b.name"
             class="branch-item"
             :class="{ current: b.isCurrent }"
-            :title="b.isCurrent ? b.name + ' (current)' : 'Switch to ' + b.name"
-            @click="switchTo(b.name, false)"
-            @contextmenu="openCtxMenu($event, b.name, b.name)"
+            :title="b.isCurrent ? b.name + ' (current)' : 'Double-click to switch to ' + b.name"
+            @dblclick="switchTo(b.name, false)"
+            @contextmenu="openCtxMenu($event, b.name, b.name, true, b.isCurrent)"
           >
             <span class="branch-icon">{{ b.isCurrent ? '●' : '○' }}</span>
             <span class="branch-name">{{ b.name }}</span>
@@ -148,9 +222,9 @@ async function rebaseOnto(target: string) {
             v-for="b in branches.remote"
             :key="`${b.remote}/${b.name}`"
             class="branch-item remote"
-            :title="'Check out ' + b.remote + '/' + b.name"
-            @click="switchTo(b.remote + '/' + b.name, true)"
-            @contextmenu="openCtxMenu($event, b.remote + '/' + b.name, b.remote + '/' + b.name)"
+            :title="'Double-click to check out ' + b.remote + '/' + b.name"
+            @dblclick="switchTo(b.remote + '/' + b.name, true)"
+            @contextmenu="openCtxMenu($event, b.remote + '/' + b.name, b.remote + '/' + b.name, false, false)"
           >
             <span class="branch-icon">↑</span>
             <span class="remote-label">{{ b.remote }}</span>/{{ b.name }}
@@ -169,9 +243,68 @@ async function rebaseOnto(target: string) {
       :style="{ left: ctxMenu.x + 'px', top: ctxMenu.y + 'px' }"
     >
       <div class="ctx-menu-label">{{ ctxMenu.label }}</div>
-      <button class="ctx-menu-item" @click="rebaseOnto(ctxMenu!.target)">
-        Rebase current branch onto this
-      </button>
+
+      <!-- Default actions -->
+      <template v-if="ctxMenu.mode === 'default'">
+        <button
+          v-if="!ctxMenu.isCurrent"
+          class="ctx-menu-item ctx-menu-item-primary"
+          @click="switchTo(ctxMenu!.target, !ctxMenu!.isLocal); closeCtxMenu()"
+        >
+          Checkout
+        </button>
+        <button v-if="ctxMenu.isLocal" class="ctx-menu-item" @click="pushBranch()">
+          Push
+        </button>
+        <button class="ctx-menu-item" @click="copyBranchName()">
+          Copy branch name
+        </button>
+        <button class="ctx-menu-item" @click="rebaseOnto(ctxMenu!.target)">
+          Rebase current branch onto this
+        </button>
+        <template v-if="ctxMenu.isLocal">
+          <div class="ctx-menu-divider" />
+          <button class="ctx-menu-item" @click="startRename()">
+            Rename
+          </button>
+          <button
+            class="ctx-menu-item ctx-menu-item-danger"
+            :disabled="ctxMenu.isCurrent"
+            :title="ctxMenu.isCurrent ? 'Cannot delete the current branch' : ''"
+            @click="startDelete()"
+          >
+            Delete
+          </button>
+        </template>
+      </template>
+
+      <!-- Rename mode -->
+      <template v-else-if="ctxMenu.mode === 'rename'">
+        <div class="ctx-menu-rename">
+          <input
+            ref="renameInputRef"
+            v-model="ctxMenu.renameValue"
+            class="ctx-menu-input"
+            placeholder="New branch name"
+            @keydown.enter="confirmRename()"
+            @keydown.esc="closeCtxMenu()"
+          />
+          <div class="ctx-menu-row">
+            <button class="ctx-menu-btn-primary" @click="confirmRename()">Rename</button>
+            <button class="ctx-menu-btn" @click="closeCtxMenu()">Cancel</button>
+          </div>
+        </div>
+      </template>
+
+      <!-- Delete confirmation mode -->
+      <template v-else-if="ctxMenu.mode === 'confirm-delete'">
+        <div class="ctx-menu-confirm">
+          <p class="ctx-menu-confirm-text">Delete "{{ ctxMenu.label }}"?</p>
+          <button class="ctx-menu-item ctx-menu-item-danger" @click="confirmDelete(false)">Delete</button>
+          <button class="ctx-menu-item ctx-menu-item-danger" @click="confirmDelete(true)">Force Delete</button>
+          <button class="ctx-menu-item" @click="closeCtxMenu()">Cancel</button>
+        </div>
+      </template>
     </div>
   </Teleport>
 </template>
@@ -231,6 +364,8 @@ async function rebaseOnto(target: string) {
   color: #aaa;
   cursor: pointer;
   white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .branch-item:hover { background: #1e2d50; color: #ddd; }
@@ -279,7 +414,7 @@ async function rebaseOnto(target: string) {
   border: 1px solid #2d2d4e;
   border-radius: 6px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.5);
-  min-width: 200px;
+  min-width: 220px;
   padding: 4px 0;
 }
 
@@ -295,6 +430,12 @@ async function rebaseOnto(target: string) {
   margin-bottom: 3px;
 }
 
+.ctx-menu-divider {
+  height: 1px;
+  background: #252540;
+  margin: 3px 0;
+}
+
 .ctx-menu-item {
   display: block;
   width: 100%;
@@ -306,5 +447,71 @@ async function rebaseOnto(target: string) {
   font-size: 12px;
   cursor: pointer;
 }
-.ctx-menu-item:hover { background: #1e2d50; color: #dde; }
+.ctx-menu-item:hover:not(:disabled) { background: #1e2d50; color: #dde; }
+.ctx-menu-item-primary { color: #4f8ef7; font-weight: 500; }
+.ctx-menu-item:disabled { opacity: 0.35; cursor: default; }
+
+.ctx-menu-item-danger { color: #f07070; }
+.ctx-menu-item-danger:hover:not(:disabled) { background: rgba(240, 80, 80, 0.12); color: #f09090; }
+
+/* Rename mode */
+.ctx-menu-rename {
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ctx-menu-input {
+  width: 100%;
+  background: #111124;
+  border: 1px solid #2d2d4e;
+  border-radius: 4px;
+  color: #e0e0e0;
+  font-size: 12px;
+  padding: 4px 8px;
+  outline: none;
+  font-family: monospace;
+}
+.ctx-menu-input:focus { border-color: #4f8ef7; }
+
+.ctx-menu-row {
+  display: flex;
+  gap: 6px;
+}
+
+.ctx-menu-btn-primary {
+  flex: 1;
+  padding: 4px 0;
+  background: #4f8ef7;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+.ctx-menu-btn-primary:hover { background: #6aa3ff; }
+
+.ctx-menu-btn {
+  flex: 1;
+  padding: 4px 0;
+  background: #252540;
+  border: none;
+  border-radius: 4px;
+  color: #aaa;
+  font-size: 12px;
+  cursor: pointer;
+}
+.ctx-menu-btn:hover { background: #2d2d50; color: #ccc; }
+
+/* Delete confirm mode */
+.ctx-menu-confirm {
+  padding: 4px 0;
+}
+
+.ctx-menu-confirm-text {
+  padding: 4px 12px 6px;
+  font-size: 11px;
+  color: #778;
+}
 </style>

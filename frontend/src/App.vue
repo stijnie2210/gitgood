@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, type Ref } from 'vue'
+import { onMounted, ref, watch, type Ref } from 'vue'
 import TabBar from './components/layout/TabBar.vue'
 import ToolBar from './components/layout/ToolBar.vue'
 import Sidebar from './components/layout/Sidebar.vue'
@@ -15,6 +15,16 @@ const repos = useReposStore()
 const commits = useCommitsStore()
 const staging = useStagingStore()
 onMounted(() => repos.loadRecents())
+
+// Keep staging badge up-to-date regardless of which tab is active
+watch(
+  () => repos.activeRepo?.path,
+  path => {
+    if (path) staging.load(path)
+    else staging.clear()
+  },
+  { immediate: true },
+)
 
 const viewMode = ref<'commits' | 'staging'>('commits')
 
@@ -95,7 +105,7 @@ const startDetailResize = makeResizer(detailWidth, 200, 800, 'left')
               :class="{ active: viewMode === 'staging' }"
               @click="viewMode = 'staging'"
             >
-              Staging
+              Working Tree
               <span v-if="staging.totalChanges" class="view-tab-badge">
                 {{ staging.totalChanges }}
               </span>

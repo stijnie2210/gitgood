@@ -38,6 +38,10 @@ export function CreateTag(arg1, arg2, arg3) {
   return window['go']['main']['App']['CreateTag'](arg1, arg2, arg3);
 }
 
+export function DeleteBranch(arg1, arg2, arg3) {
+  return window['go']['main']['App']['DeleteBranch'](arg1, arg2, arg3);
+}
+
 export function DiscardFile(arg1, arg2) {
   return window['go']['main']['App']['DiscardFile'](arg1, arg2);
 }
@@ -120,6 +124,14 @@ export function PullBranch(arg1) {
 
 export function PushBranch(arg1) {
   return window['go']['main']['App']['PushBranch'](arg1);
+}
+
+export function PushNamedBranch(arg1, arg2) {
+  return window['go']['main']['App']['PushNamedBranch'](arg1, arg2);
+}
+
+export function RenameBranch(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RenameBranch'](arg1, arg2, arg3);
 }
 
 export function ResetBranch(arg1, arg2, arg3) {

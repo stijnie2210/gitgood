@@ -105,20 +105,32 @@ Background hierarchy: `#0a0a14` (deepest) → `#0f0f1a` → `#0d0d18` → `#1111
 - **Phase 2** ✅ — Commit graph with lane layout, virtual scroll, commit diff viewer
 - **Phase 3** ✅ — Working tree status/diff, stage/unstage files and hunks, fetch/pull, Staging view
 - **Phase 4** ✅ — Conflict resolution: merge banner, conflicted file list, ConflictView (Accept Ours/Theirs per chunk), AbortMerge, merge message pre-fill
+- **Phase 5** ✅ — Rebasing: StartRebase/ContinueRebase/AbortRebase, rebase banner in Working Tree, conflict resolution reuses ConflictView, sidebar branch context menu "Rebase onto X"
+- **Phase 6A** 🔄 — Branch context menu (quick wins): Delete branch, Rename branch, Copy branch name, Push branch
+- **Phase 6B** ⬜ — Branch context menu (medium): Create branch from here, Merge into current, Set upstream, Create tag here
 
 ### Conflict resolution flow (`internal/repo/conflict.go`)
 `IsInMerge()` checks for `MERGE_HEAD` / `CHERRY_PICK_HEAD`. `GetConflictContent()` calls `git show :1:/:2:/:3:` for base/ours/theirs plus reads the working file (with markers). `ResolveConflict()` writes the file and stages it. `AbortMerge()` runs `git merge --abort`.
 
 Frontend parses `<<<<<<< / ======= / >>>>>>>` markers into context + conflict chunks. Each conflict chunk has Accept Ours / Accept Theirs buttons. "Save & Stage" assembles accepted chunks and calls `ResolveConflict`. Merge message auto-fills commit summary when `isInMerge` becomes true.
 
-## Next: Phase 5 — Rebasing
+### Rebase flow (`internal/gitcli/rebase.go`)
+`StartRebase(onto)` → `git rebase <onto>`. `ContinueRebase()` → `git rebase --continue`. `AbortRebase()` → `git rebase --abort`. Working Tree view shows a rebase banner with step/total progress, reuses ConflictView for mid-rebase conflicts.
 
-```
-internal/gitcli/rebase.go      detect .git/rebase-merge/, git rebase --continue/--abort
-app.go                         StartRebase, ContinueRebase, AbortRebase
-                               Reuses ConflictView for conflict resolution during rebase
-Sidebar branch context menu    "Rebase onto X"
-```
+### Branch context menu (Phase 6A/6B, `Sidebar.vue` + `internal/gitcli/branches.go`)
+Context menu is teleported to `<body>` to escape sidebar overflow clipping. Positioned via `getBoundingClientRect()`.
+
+**Phase 6A** items (all gitcli shell-outs):
+- **Delete**: `git branch -d <name>`; on failure offer force-delete (`-D`) via confirmation
+- **Rename**: `git branch -m <old> <new>`; name input via inline prompt
+- **Copy name**: `navigator.clipboard.writeText()`
+- **Push**: reuse existing `Push(repoPath, branch)` from `internal/gitcli/remote.go`
+
+**Phase 6B** items:
+- **Create branch from here**: `git checkout -b <name> <base>` — needs name input modal
+- **Merge into current**: `git merge <branch>` — conflicts land in Working Tree view
+- **Set upstream**: `git branch --set-upstream-to=origin/<name>`
+- **Create tag**: `git tag <name> <hash>` — needs name input modal
 
 ## Pending Small Items
 

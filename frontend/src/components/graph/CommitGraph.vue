@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import { useCommitsStore } from '../../stores/commits'
 import { useReposStore } from '../../stores/repos'
@@ -13,10 +13,23 @@ const repos = useReposStore()
 const commits = useCommitsStore()
 
 const parentRef = ref<HTMLElement | null>(null)
+const searchQuery = ref('')
+const searchVisible = ref(false)
+const searchInputRef = ref<HTMLInputElement | null>(null)
+
+const filteredRows = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return commits.rows
+  return commits.rows.filter(r =>
+    r.hash.startsWith(q) ||
+    r.subject.toLowerCase().includes(q) ||
+    r.author.toLowerCase().includes(q)
+  )
+})
 
 const virtualizer = useVirtualizer(
   computed(() => ({
-    count: commits.rows.length,
+    count: filteredRows.value.length,
     getScrollElement: () => parentRef.value,
     estimateSize: () => ROW_H,
     overscan: 15,
@@ -36,8 +49,45 @@ watch(
   { immediate: true },
 )
 
+// Scroll to top when search results change so first match is visible
+watch(filteredRows, () => {
+  virtualizer.value.scrollToIndex(0)
+})
+
+function openSearch() {
+  searchVisible.value = true
+  nextTick(() => searchInputRef.value?.focus())
+}
+
+function closeSearch() {
+  searchVisible.value = false
+  searchQuery.value = ''
+}
+
+function onGlobalKeyDown(e: KeyboardEvent) {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+    e.preventDefault()
+    openSearch()
+  }
+}
+
+function onSearchKeyDown(e: KeyboardEvent) {
+  if (e.key === 'Escape') closeSearch()
+}
+
+function onScroll() {
+  const el = parentRef.value
+  if (!el || commits.loadingMore || !commits.hasMore) return
+  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 300) {
+    commits.loadMore()
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', onGlobalKeyDown))
+onUnmounted(() => window.removeEventListener('keydown', onGlobalKeyDown))
+
 function onRowClick(index: number) {
-  const row = commits.rows[index]
+  const row = filteredRows.value[index]
   if (row && repos.activeRepo) {
     commits.selectCommit(repos.activeRepo.path, row.hash)
   }
@@ -63,51 +113,128 @@ async function onMenuRefresh() {
 </script>
 
 <template>
-  <div ref="parentRef" class="graph-scroller">
-    <div v-if="commits.loading" class="loading">Loading commits…</div>
-
-    <div v-else-if="commits.error" class="load-error">
-      <span>Failed to load commits</span>
-      <code>{{ commits.error }}</code>
+  <div class="commit-graph-root">
+    <!-- Search bar -->
+    <div v-if="searchVisible" class="search-bar">
+      <input
+        ref="searchInputRef"
+        v-model="searchQuery"
+        class="search-input"
+        placeholder="Search commits…"
+        @keydown="onSearchKeyDown"
+      />
+      <span class="search-count" v-if="searchQuery.trim()">
+        {{ filteredRows.length }} result{{ filteredRows.length === 1 ? '' : 's' }}
+      </span>
+      <button class="search-close" @click="closeSearch">×</button>
     </div>
 
-    <div v-else :style="{ height: `${totalSize}px`, position: 'relative' }">
-      <div
-        v-for="item in items"
-        :key="item.index"
-        :style="{
-          position: 'absolute',
-          top: 0,
-          transform: `translateY(${item.start}px)`,
-          width: '100%',
-          height: `${ROW_H}px`,
-        }"
-        @click="onRowClick(item.index)"
-        @contextmenu.prevent="onRowContextMenu(item.index, $event)"
-      >
-        <CommitRow
-          v-if="commits.rows[item.index]"
-          :row="commits.rows[item.index]"
-          :graph-width="graphWidth"
-          :row-h="ROW_H"
-          :selected="commits.selectedHash === commits.rows[item.index].hash"
-        />
+    <div ref="parentRef" class="graph-scroller" @scroll="onScroll">
+      <div v-if="commits.loading" class="loading">Loading commits…</div>
+
+      <div v-else-if="commits.error" class="load-error">
+        <span>Failed to load commits</span>
+        <code>{{ commits.error }}</code>
+      </div>
+
+      <div v-else-if="searchQuery.trim() && filteredRows.length === 0" class="no-results">
+        No commits match "{{ searchQuery }}"
+      </div>
+
+      <div v-else :style="{ height: `${totalSize}px`, position: 'relative' }">
+        <div
+          v-for="item in items"
+          :key="item.index"
+          :style="{
+            position: 'absolute',
+            top: 0,
+            transform: `translateY(${item.start}px)`,
+            width: '100%',
+            height: `${ROW_H}px`,
+          }"
+          @click="onRowClick(item.index)"
+          @contextmenu.prevent="onRowContextMenu(item.index, $event)"
+        >
+          <CommitRow
+            v-if="filteredRows[item.index]"
+            :row="filteredRows[item.index]"
+            :graph-width="graphWidth"
+            :row-h="ROW_H"
+            :selected="commits.selectedHash === filteredRows[item.index].hash"
+          />
+        </div>
+      </div>
+
+      <CommitContextMenu
+        v-if="menu && filteredRows[menu.index]"
+        :row="filteredRows[menu.index]"
+        :repo-path="repos.activeRepo?.path ?? ''"
+        :x="menu.x"
+        :y="menu.y"
+        @close="closeMenu"
+        @refresh="onMenuRefresh"
+      />
+
+      <div v-if="commits.loadingMore" class="loading-more">Loading more commits…</div>
+      <div v-else-if="!commits.hasMore && commits.rows.length > 0 && !searchQuery.trim()" class="load-end">
+        {{ commits.rows.length }} commits loaded
       </div>
     </div>
-
-    <CommitContextMenu
-      v-if="menu && commits.rows[menu.index]"
-      :row="commits.rows[menu.index]"
-      :repo-path="repos.activeRepo?.path ?? ''"
-      :x="menu.x"
-      :y="menu.y"
-      @close="closeMenu"
-      @refresh="onMenuRefresh"
-    />
   </div>
 </template>
 
 <style scoped>
+.commit-graph-root {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  background: #0d0d1e;
+  border-bottom: 1px solid #2d2d4e;
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  background: #1a1a2e;
+  border: 1px solid #2d2d4e;
+  border-radius: 4px;
+  color: #e0e0e0;
+  font-size: 13px;
+  padding: 3px 8px;
+  outline: none;
+}
+
+.search-input:focus {
+  border-color: #4f8ef7;
+}
+
+.search-count {
+  font-size: 12px;
+  color: #556;
+  white-space: nowrap;
+}
+
+.search-close {
+  background: none;
+  border: none;
+  color: #556;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.search-close:hover { color: #aaa; }
+
 .graph-scroller {
   flex: 1;
   overflow-y: auto;
@@ -136,5 +263,26 @@ async function onMenuRefresh() {
   color: #a05050;
   word-break: break-all;
   font-family: monospace;
+}
+
+.no-results {
+  padding: 24px;
+  color: #555;
+  text-align: center;
+  font-size: 13px;
+}
+
+.loading-more {
+  padding: 12px;
+  color: #445;
+  text-align: center;
+  font-size: 12px;
+}
+
+.load-end {
+  padding: 12px;
+  color: #334;
+  text-align: center;
+  font-size: 11px;
 }
 </style>

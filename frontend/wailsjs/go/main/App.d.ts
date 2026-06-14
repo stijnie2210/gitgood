@@ -22,6 +22,8 @@ export function CreateBranchAt(arg1:string,arg2:string,arg3:string):Promise<void
 
 export function CreateTag(arg1:string,arg2:string,arg3:string):Promise<void>;
 
+export function DeleteBranch(arg1:string,arg2:string,arg3:boolean):Promise<void>;
+
 export function DiscardFile(arg1:string,arg2:string):Promise<void>;
 
 export function FetchAll(arg1:string):Promise<void>;
@@ -63,6 +65,10 @@ export function PickDirectory():Promise<string>;
 export function PullBranch(arg1:string):Promise<void>;
 
 export function PushBranch(arg1:string):Promise<void>;
+
+export function PushNamedBranch(arg1:string,arg2:string):Promise<void>;
+
+export function RenameBranch(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function ResetBranch(arg1:string,arg2:string,arg3:string):Promise<void>;
 
