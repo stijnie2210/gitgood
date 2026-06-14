@@ -62,6 +62,8 @@ export function ListOpenRepositories():Promise<Array<string>>;
 
 export function ListRecentRepositories():Promise<Array<main.RecentRepo>>;
 
+export function LoadSession():Promise<repo.Session>;
+
 export function OpenInDefaultApp(arg1:string,arg2:string):Promise<void>;
 
 export function OpenInEditor(arg1:string,arg2:string):Promise<void>;
@@ -87,6 +89,8 @@ export function ResolveConflict(arg1:string,arg2:string,arg3:string):Promise<voi
 export function RevertCommit(arg1:string,arg2:string,arg3:boolean):Promise<void>;
 
 export function SavePatchFile(arg1:string,arg2:string):Promise<void>;
+
+export function SaveSession(arg1:Array<repo.SessionTab>,arg2:number):Promise<void>;
 
 export function ShowInFinder(arg1:string,arg2:string):Promise<void>;
 

@@ -15,7 +15,10 @@ import logoUrl from './assets/images/logo-icon.png'
 const repos = useReposStore()
 const commits = useCommitsStore()
 const staging = useStagingStore()
-onMounted(() => repos.loadRecents())
+onMounted(async () => {
+  await repos.restoreSession()
+  repos.loadRecents()
+})
 
 // Keep staging badge up-to-date regardless of which tab is active
 watch(

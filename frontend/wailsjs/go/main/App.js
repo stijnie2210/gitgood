@@ -118,6 +118,10 @@ export function ListRecentRepositories() {
   return window['go']['main']['App']['ListRecentRepositories']();
 }
 
+export function LoadSession() {
+  return window['go']['main']['App']['LoadSession']();
+}
+
 export function OpenInDefaultApp(arg1, arg2) {
   return window['go']['main']['App']['OpenInDefaultApp'](arg1, arg2);
 }
@@ -168,6 +172,10 @@ export function RevertCommit(arg1, arg2, arg3) {
 
 export function SavePatchFile(arg1, arg2) {
   return window['go']['main']['App']['SavePatchFile'](arg1, arg2);
+}
+
+export function SaveSession(arg1, arg2) {
+  return window['go']['main']['App']['SaveSession'](arg1, arg2);
 }
 
 export function ShowInFinder(arg1, arg2) {

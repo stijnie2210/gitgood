@@ -278,3 +278,15 @@ func (a *App) SavePatchFile(repoPath, filePath string) error {
 func (a *App) DeleteWorkingFile(repoPath, filePath string) error {
 	return gitcli.DeleteWorkingFile(repoPath, filePath)
 }
+
+func (a *App) LoadSession() (repo.Session, error) {
+	s, err := repo.LoadSession()
+	if err != nil {
+		return repo.Session{}, err
+	}
+	return *s, nil
+}
+
+func (a *App) SaveSession(tabs []repo.SessionTab, activeIndex int) error {
+	return repo.SaveSession(tabs, activeIndex)
+}
