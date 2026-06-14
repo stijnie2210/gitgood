@@ -1,36 +1,68 @@
 <script setup lang="ts">
-import { onMounted, ref, watch, type Ref } from 'vue'
-import TabBar from './components/layout/TabBar.vue'
-import ToolBar from './components/layout/ToolBar.vue'
-import Sidebar from './components/layout/Sidebar.vue'
-import CommitGraph from './components/graph/CommitGraph.vue'
-import CommitDetail from './components/graph/CommitDetail.vue'
-import StagingView from './components/staging/StagingView.vue'
-import ToastStack from './components/layout/ToastStack.vue'
-import { useReposStore } from './stores/repos'
-import { useCommitsStore } from './stores/commits'
-import { useStagingStore } from './stores/staging'
-import logoUrl from './assets/images/logo-icon.png'
+import { onMounted, onUnmounted, ref, watch, type Ref } from 'vue';
+import TabBar from './components/layout/TabBar.vue';
+import ToolBar from './components/layout/ToolBar.vue';
+import Sidebar from './components/layout/Sidebar.vue';
+import CommitGraph from './components/graph/CommitGraph.vue';
+import CommitDetail from './components/graph/CommitDetail.vue';
+import StagingView from './components/staging/StagingView.vue';
+import ToastStack from './components/layout/ToastStack.vue';
+import { useReposStore } from './stores/repos';
+import { useCommitsStore } from './stores/commits';
+import { useStagingStore } from './stores/staging';
+import { useBranchesStore } from './stores/branches';
+import logoUrl from './assets/images/logo-icon.png';
 
-const repos = useReposStore()
-const commits = useCommitsStore()
-const staging = useStagingStore()
+const repos = useReposStore();
+const commits = useCommitsStore();
+const staging = useStagingStore();
+const branches = useBranchesStore();
 onMounted(async () => {
-  await repos.restoreSession()
-  repos.loadRecents()
-})
+  await repos.restoreSession();
+  repos.loadRecents();
+});
 
 // Keep staging badge up-to-date regardless of which tab is active
 watch(
   () => repos.activeRepo?.path,
   path => {
-    if (path) staging.load(path)
-    else staging.clear()
+    if (path) {
+      staging.load(path);
+    } else {
+      staging.clear();
+    }
   },
   { immediate: true },
-)
+);
 
-const viewMode = ref<'commits' | 'staging'>('commits')
+const FETCH_POLL_MS = 60_000;
+let fetchPollTimer: ReturnType<typeof setInterval> | null = null;
+
+watch(
+  () => repos.activeRepo?.path,
+  path => {
+    if (fetchPollTimer !== null) {
+      clearInterval(fetchPollTimer);
+      fetchPollTimer = null;
+    }
+    if (!path) {
+      return;
+    }
+    branches.silentFetchAndRefresh(path);
+    fetchPollTimer = setInterval(() => {
+      branches.silentFetchAndRefresh(path);
+    }, FETCH_POLL_MS);
+  },
+  { immediate: true },
+);
+
+onUnmounted(() => {
+  if (fetchPollTimer !== null) {
+    clearInterval(fetchPollTimer);
+  }
+});
+
+const viewMode = ref<'commits' | 'staging'>('commits');
 
 // Generic resize helper
 function makeResizer(
@@ -39,32 +71,32 @@ function makeResizer(
   max: number,
   direction: 'right' | 'left' = 'right',
 ) {
-  let startX = 0
-  let startW = 0
+  let startX = 0;
+  let startW = 0;
 
   function onMove(e: MouseEvent) {
-    const delta = e.clientX - startX
-    width.value = Math.max(min, Math.min(max, startW + (direction === 'right' ? delta : -delta)))
+    const delta = e.clientX - startX;
+    width.value = Math.max(min, Math.min(max, startW + (direction === 'right' ? delta : -delta)));
   }
 
   function onUp() {
-    window.removeEventListener('mousemove', onMove)
-    window.removeEventListener('mouseup', onUp)
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('mouseup', onUp);
   }
 
   return (e: MouseEvent) => {
-    startX = e.clientX
-    startW = width.value
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-  }
+    startX = e.clientX;
+    startW = width.value;
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
 }
 
-const sidebarWidth = ref(220)
-const detailWidth = ref(380)
+const sidebarWidth = ref(220);
+const detailWidth = ref(380);
 
-const startSidebarResize = makeResizer(sidebarWidth, 140, 500, 'right')
-const startDetailResize = makeResizer(detailWidth, 200, 800, 'left')
+const startSidebarResize = makeResizer(sidebarWidth, 140, 500, 'right');
+const startDetailResize = makeResizer(detailWidth, 200, 800, 'left');
 </script>
 
 <template>

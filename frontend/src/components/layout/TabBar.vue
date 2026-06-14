@@ -1,53 +1,53 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useReposStore } from '../../stores/repos'
+import { ref, onMounted, onUnmounted } from 'vue';
+import { useReposStore } from '../../stores/repos';
 
-const repos = useReposStore()
+const repos = useReposStore();
 
-const showPicker = ref(false)
-const pickerPos = ref({ x: 0, y: 0 })
-const addBtnRef = ref<HTMLButtonElement | null>(null)
+const showPicker = ref(false);
+const pickerPos = ref({ x: 0, y: 0 });
+const addBtnRef = ref<HTMLButtonElement | null>(null);
 
 function shortenPath(path: string): string {
-  return path.replace(/^\/Users\/[^/]+/, '~')
+  return path.replace(/^\/Users\/[^/]+/, '~');
 }
 
 async function openPicker() {
   if (showPicker.value) {
-    showPicker.value = false
-    return
+    showPicker.value = false;
+    return;
   }
-  await repos.loadRecents()
+  await repos.loadRecents();
   if (addBtnRef.value) {
-    const rect = addBtnRef.value.getBoundingClientRect()
-    pickerPos.value = { x: rect.left, y: rect.bottom }
+    const rect = addBtnRef.value.getBoundingClientRect();
+    pickerPos.value = { x: rect.left, y: rect.bottom };
   }
-  showPicker.value = true
+  showPicker.value = true;
 }
 
 function closePicker() {
-  showPicker.value = false
+  showPicker.value = false;
 }
 
 async function openRecent(path: string) {
-  closePicker()
-  await repos.openRepo(path)
+  closePicker();
+  await repos.openRepo(path);
 }
 
 async function browseFolder() {
-  closePicker()
-  await repos.pickAndOpen()
+  closePicker();
+  await repos.pickAndOpen();
 }
 
 function onWindowMouseDown(e: MouseEvent) {
-  const target = e.target as HTMLElement
+  const target = e.target as HTMLElement;
   if (!target.closest('.repo-picker') && !target.closest('.tab-add')) {
-    closePicker()
+    closePicker();
   }
 }
 
-onMounted(() => window.addEventListener('mousedown', onWindowMouseDown))
-onUnmounted(() => window.removeEventListener('mousedown', onWindowMouseDown))
+onMounted(() => window.addEventListener('mousedown', onWindowMouseDown));
+onUnmounted(() => window.removeEventListener('mousedown', onWindowMouseDown));
 </script>
 
 <template>
@@ -62,7 +62,7 @@ onUnmounted(() => window.removeEventListener('mousedown', onWindowMouseDown))
       <span class="tab-name">{{ tab.name }}</span>
       <span class="tab-close" @click.stop="repos.closeTab(i)">×</span>
     </button>
-    <button ref="addBtnRef" class="tab-add" @click="openPicker()" title="Open repository">+</button>
+    <button ref="addBtnRef" class="tab-add" title="Open repository" @click="openPicker()">+</button>
   </div>
 
   <Teleport to="body">

@@ -1,25 +1,25 @@
 <script setup lang="ts">
-import { ref, watchEffect } from 'vue'
-import type { GraphRow } from '../../stores/commits'
-import { CELL_W, drawGraphCell } from './graphRenderer'
+import { ref, watchEffect } from 'vue';
+import type { GraphRow } from '../../stores/commits';
+import { drawGraphCell } from './graphRenderer';
 
 const props = defineProps<{
   row: GraphRow
   graphWidth: number
   rowH: number
   selected: boolean
-}>()
+}>();
 
-const canvasRef = ref<HTMLCanvasElement | null>(null)
+const canvasRef = ref<HTMLCanvasElement | null>(null);
 
 watchEffect(() => {
-  const canvas = canvasRef.value
-  if (!canvas || !props.row) return
-  canvas.width = props.graphWidth
-  canvas.height = props.rowH
-  const ctx = canvas.getContext('2d')
-  if (ctx) drawGraphCell(ctx, props.row, props.rowH)
-})
+  const canvas = canvasRef.value;
+  if (!canvas || !props.row) {return;}
+  canvas.width = props.graphWidth;
+  canvas.height = props.rowH;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {drawGraphCell(ctx, props.row, props.rowH);}
+});
 </script>
 
 <template>

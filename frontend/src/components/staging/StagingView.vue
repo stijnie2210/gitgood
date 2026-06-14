@@ -1,219 +1,219 @@
 <script setup lang="ts">
-import { ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import type { Ref } from 'vue'
-import { useReposStore } from '../../stores/repos'
-import { useBranchesStore } from '../../stores/branches'
-import { useCommitsStore } from '../../stores/commits'
-import { useStagingStore, isConflictedFile } from '../../stores/staging'
-import { useToastStore } from '../../stores/toast'
-import HunkSelector from './HunkSelector.vue'
-import ConflictView from './ConflictView.vue'
-import type { Hunk } from '../../stores/staging'
-import { clampMenuPosition } from '../../composables/useContextMenu'
+import { ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import type { Ref } from 'vue';
+import { useReposStore } from '../../stores/repos';
+import { useBranchesStore } from '../../stores/branches';
+import { useCommitsStore } from '../../stores/commits';
+import { useStagingStore, isConflictedFile } from '../../stores/staging';
+import { useToastStore } from '../../stores/toast';
+import HunkSelector from './HunkSelector.vue';
+import ConflictView from './ConflictView.vue';
+import type { Hunk } from '../../stores/staging';
+import { clampMenuPosition } from '../../composables/useContextMenu';
 import {
   AbortMerge, ContinueRebase, AbortRebase, GetFileBase64,
   OpenInDefaultApp, ShowInFinder, OpenInEditor,
   StashFile, AppendToGitignore, SavePatchFile, DeleteWorkingFile,
-} from '../../../wailsjs/go/main/App'
+} from '../../../wailsjs/go/main/App';
 
-const repos = useReposStore()
-const branches = useBranchesStore()
-const commits = useCommitsStore()
-const staging = useStagingStore()
-const toast = useToastStore()
+const repos = useReposStore();
+const branches = useBranchesStore();
+const commits = useCommitsStore();
+const staging = useStagingStore();
+const toast = useToastStore();
 
-const fileListWidth = ref(260)
+const fileListWidth = ref(260);
 
 function makeResizer(width: Ref<number>, min: number, max: number) {
-  let startX = 0
-  let startW = 0
+  let startX = 0;
+  let startW = 0;
   function onMove(e: MouseEvent) {
-    width.value = Math.max(min, Math.min(max, startW + e.clientX - startX))
+    width.value = Math.max(min, Math.min(max, startW + e.clientX - startX));
   }
   function onUp() {
-    window.removeEventListener('mousemove', onMove)
-    window.removeEventListener('mouseup', onUp)
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('mouseup', onUp);
   }
   return (e: MouseEvent) => {
-    startX = e.clientX
-    startW = width.value
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-  }
+    startX = e.clientX;
+    startW = width.value;
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
 }
 
-const startResize = makeResizer(fileListWidth, 180, 520)
+const startResize = makeResizer(fileListWidth, 180, 520);
 
 watch(
   () => repos.activeRepo?.path,
   path => {
     if (path) {
-      staging.load(path)
+      staging.load(path);
     } else {
-      staging.clear()
+      staging.clear();
     }
   },
   { immediate: true },
-)
+);
 
 function shortPath(p: string) {
-  const parts = p.split('/')
+  const parts = p.split('/');
   if (parts.length > 2) {
-    return '…/' + parts.slice(-2).join('/')
+    return '…/' + parts.slice(-2).join('/');
   }
-  return p
+  return p;
 }
 
-const repoPath = () => repos.activeRepo?.path ?? ''
+const repoPath = () => repos.activeRepo?.path ?? '';
 
 function onSelectFile(path: string, mode: 'staged' | 'unstaged') {
-  staging.selectFile(repoPath(), path, mode)
+  staging.selectFile(repoPath(), path, mode);
 }
 async function onStageFile(path: string) {
-  const prevIdx = staging.unstagedFiles.findIndex(f => f.path === path)
-  const wasSelected = staging.selectedPath === path
-  await staging.stageFile(repoPath(), path)
+  const prevIdx = staging.unstagedFiles.findIndex(f => f.path === path);
+  const wasSelected = staging.selectedPath === path;
+  await staging.stageFile(repoPath(), path);
   if (!wasSelected) {
-    return
+    return;
   }
-  const next = staging.unstagedFiles[prevIdx] ?? staging.unstagedFiles[prevIdx - 1]
+  const next = staging.unstagedFiles[prevIdx] ?? staging.unstagedFiles[prevIdx - 1];
   if (next) {
-    onSelectFile(next.path, 'unstaged')
+    onSelectFile(next.path, 'unstaged');
   } else if (staging.stagedFiles.length) {
-    onSelectFile(staging.stagedFiles[0].path, 'staged')
+    onSelectFile(staging.stagedFiles[0].path, 'staged');
   } else {
-    staging.selectedPath = null
-    staging.diff = []
+    staging.selectedPath = null;
+    staging.diff = [];
   }
 }
 
 async function onUnstageFile(path: string) {
-  const prevIdx = staging.stagedFiles.findIndex(f => f.path === path)
-  const wasSelected = staging.selectedPath === path
-  await staging.unstageFile(repoPath(), path)
+  const prevIdx = staging.stagedFiles.findIndex(f => f.path === path);
+  const wasSelected = staging.selectedPath === path;
+  await staging.unstageFile(repoPath(), path);
   if (!wasSelected) {
-    return
+    return;
   }
-  const next = staging.stagedFiles[prevIdx] ?? staging.stagedFiles[prevIdx - 1]
+  const next = staging.stagedFiles[prevIdx] ?? staging.stagedFiles[prevIdx - 1];
   if (next) {
-    onSelectFile(next.path, 'staged')
+    onSelectFile(next.path, 'staged');
   } else if (staging.unstagedFiles.length) {
-    onSelectFile(staging.unstagedFiles[0].path, 'unstaged')
+    onSelectFile(staging.unstagedFiles[0].path, 'unstaged');
   } else {
-    staging.selectedPath = null
-    staging.diff = []
+    staging.selectedPath = null;
+    staging.diff = [];
   }
 }
 
 function onDiscardFile(path: string) {
-  staging.discardFile(repoPath(), path)
+  staging.discardFile(repoPath(), path);
 }
 
 function onStageHunk(hunk: Hunk) {
   if (staging.selectedPath) {
-    staging.stageHunk(repoPath(), staging.selectedPath, hunk)
+    staging.stageHunk(repoPath(), staging.selectedPath, hunk);
   }
 }
 
 function onUnstageHunk(hunk: Hunk) {
   if (staging.selectedPath) {
-    staging.unstageHunk(repoPath(), staging.selectedPath, hunk)
+    staging.unstageHunk(repoPath(), staging.selectedPath, hunk);
   }
 }
 async function onStageAll() {
-  for (const f of staging.unstagedFiles) await staging.stageFile(repoPath(), f.path)
+  for (const f of staging.unstagedFiles) {await staging.stageFile(repoPath(), f.path);}
 }
 async function onUnstageAll() {
-  for (const f of staging.stagedFiles) await staging.unstageFile(repoPath(), f.path)
+  for (const f of staging.stagedFiles) {await staging.unstageFile(repoPath(), f.path);}
 }
 
 // ── Commit panel ─────────────────────────────────────────────────────────────
-const commitSummary = ref('')
-const commitDescription = ref('')
+const commitSummary = ref('');
+const commitDescription = ref('');
 
 watch(
   () => staging.isInMerge,
   inMerge => {
     if (inMerge && staging.mergeMessage && !commitSummary.value) {
-      const lines = staging.mergeMessage.trim().split('\n')
-      commitSummary.value = lines[0] ?? ''
+      const lines = staging.mergeMessage.trim().split('\n');
+      commitSummary.value = lines[0] ?? '';
       if (lines.length > 2) {
-        commitDescription.value = lines.slice(2).join('\n').trim()
+        commitDescription.value = lines.slice(2).join('\n').trim();
       }
     }
   },
-)
-const amend = ref(false)
-const committing = ref(false)
+);
+const amend = ref(false);
+const committing = ref(false);
 
 const currentBranch = computed(
   () => branches.local.find(b => b.isCurrent)?.name ?? 'HEAD'
-)
+);
 
 // subject line: conventional max 72 chars
-const summaryRemaining = computed(() => 72 - commitSummary.value.length)
+const summaryRemaining = computed(() => 72 - commitSummary.value.length);
 
 const canCommit = computed(() => {
   if (committing.value) {
-    return false
+    return false;
   }
   if (amend.value) {
-    return true // amend: staged files optional
+    return true; // amend: staged files optional
   }
-  return staging.stagedFiles.length > 0 && commitSummary.value.trim().length > 0
-})
+  return staging.stagedFiles.length > 0 && commitSummary.value.trim().length > 0;
+});
 
 async function onAmendToggle() {
   if (amend.value && !commitSummary.value) {
-    commitSummary.value = await staging.getLastCommitSubject(repoPath())
+    commitSummary.value = await staging.getLastCommitSubject(repoPath());
   }
   if (!amend.value) {
-    commitSummary.value = ''
-    commitDescription.value = ''
+    commitSummary.value = '';
+    commitDescription.value = '';
   }
 }
 
 async function onCommit() {
   if (!canCommit.value) {
-    return
+    return;
   }
-  committing.value = true
+  committing.value = true;
   try {
-    const parts = [commitSummary.value.trim()]
+    const parts = [commitSummary.value.trim()];
     if (commitDescription.value.trim()) {
-      parts.push('', commitDescription.value.trim())
+      parts.push('', commitDescription.value.trim());
     }
-    const branch = currentBranch.value
-    const wasAmend = amend.value
-    await staging.commit(repoPath(), parts.join('\n'), amend.value)
-    await Promise.all([commits.load(repoPath()), branches.load(repoPath())])
-    commitSummary.value = ''
-    commitDescription.value = ''
-    amend.value = false
-    toast.success(wasAmend ? `Amended commit on ${branch}` : `Committed to ${branch}`)
+    const branch = currentBranch.value;
+    const wasAmend = amend.value;
+    await staging.commit(repoPath(), parts.join('\n'), amend.value);
+    await Promise.all([commits.load(repoPath()), branches.load(repoPath())]);
+    commitSummary.value = '';
+    commitDescription.value = '';
+    amend.value = false;
+    toast.success(wasAmend ? `Amended commit on ${branch}` : `Committed to ${branch}`);
   } catch (e) {
-    toast.error(String(e))
+    toast.error(String(e));
   } finally {
-    committing.value = false
+    committing.value = false;
   }
 }
 
 const STATUS_LABELS: Record<string, string> = {
   M: 'M', A: 'A', D: 'D', R: 'R', C: 'C', '?': 'U', U: '!',
-}
+};
 
 const selectedIsConflict = computed(() => {
   if (!staging.selectedPath) {
-    return false
+    return false;
   }
-  const f = staging.files.find(x => x.path === staging.selectedPath)
-  return f ? isConflictedFile(f) : false
-})
+  const f = staging.files.find(x => x.path === staging.selectedPath);
+  return f ? isConflictedFile(f) : false;
+});
 
 function onSelectConflict(path: string) {
-  staging.selectedPath = path
-  staging.selectedMode = 'unstaged'
-  staging.diff = []
+  staging.selectedPath = path;
+  staging.selectedMode = 'unstaged';
+  staging.diff = [];
 }
 
 // ── File context menu ─────────────────────────────────────────────────────────
@@ -228,168 +228,168 @@ interface FileCtxMenu {
   mode: FileCtxMode
 }
 
-const fileCtxMenu = ref<FileCtxMenu | null>(null)
+const fileCtxMenu = ref<FileCtxMenu | null>(null);
 
 async function openFileCtxMenu(e: MouseEvent, path: string, section: FileCtxMenu['section']) {
-  e.preventDefault()
-  e.stopPropagation()
-  fileCtxMenu.value = { x: e.clientX, y: e.clientY, path, section, mode: 'default' }
-  await nextTick()
-  const menu = document.getElementById('file-ctx-menu')
+  e.preventDefault();
+  e.stopPropagation();
+  fileCtxMenu.value = { x: e.clientX, y: e.clientY, path, section, mode: 'default' };
+  await nextTick();
+  const menu = document.getElementById('file-ctx-menu');
   if (menu && fileCtxMenu.value) {
-    const { x, y } = clampMenuPosition(menu, e.clientX, e.clientY)
-    fileCtxMenu.value = { ...fileCtxMenu.value, x, y }
+    const { x, y } = clampMenuPosition(menu, e.clientX, e.clientY);
+    fileCtxMenu.value = { ...fileCtxMenu.value, x, y };
   }
 }
 
 function closeFileCtxMenu() {
-  fileCtxMenu.value = null
+  fileCtxMenu.value = null;
 }
 
 function onFileCtxMouseDown(e: MouseEvent) {
-  const menu = document.getElementById('file-ctx-menu')
+  const menu = document.getElementById('file-ctx-menu');
   if (menu && !menu.contains(e.target as Node)) {
-    closeFileCtxMenu()
+    closeFileCtxMenu();
   }
 }
 
-onMounted(() => window.addEventListener('mousedown', onFileCtxMouseDown))
-onUnmounted(() => window.removeEventListener('mousedown', onFileCtxMouseDown))
+onMounted(() => window.addEventListener('mousedown', onFileCtxMouseDown));
+onUnmounted(() => window.removeEventListener('mousedown', onFileCtxMouseDown));
 
 function fileExt(path: string): string {
-  return path.split('.').pop() ?? ''
+  return path.split('.').pop() ?? '';
 }
 
 function fileDir(path: string): string {
-  const parts = path.split('/')
-  return parts.length > 1 ? parts.slice(0, -1).join('/') + '/' : ''
+  const parts = path.split('/');
+  return parts.length > 1 ? parts.slice(0, -1).join('/') + '/' : '';
 }
 
 async function ctxStageFile() {
-  const m = fileCtxMenu.value
-  if (!m) { return }
-  closeFileCtxMenu()
-  await onStageFile(m.path)
+  const m = fileCtxMenu.value;
+  if (!m) { return; }
+  closeFileCtxMenu();
+  await onStageFile(m.path);
 }
 
 async function ctxUnstageFile() {
-  const m = fileCtxMenu.value
-  if (!m) { return }
-  closeFileCtxMenu()
-  await onUnstageFile(m.path)
+  const m = fileCtxMenu.value;
+  if (!m) { return; }
+  closeFileCtxMenu();
+  await onUnstageFile(m.path);
 }
 
 async function ctxDiscardFile() {
-  const m = fileCtxMenu.value
-  if (!m) { return }
-  closeFileCtxMenu()
-  await staging.discardFile(repoPath(), m.path)
+  const m = fileCtxMenu.value;
+  if (!m) { return; }
+  closeFileCtxMenu();
+  await staging.discardFile(repoPath(), m.path);
 }
 
 async function ctxStashFile() {
-  const m = fileCtxMenu.value
-  if (!m) { return }
-  closeFileCtxMenu()
+  const m = fileCtxMenu.value;
+  if (!m) { return; }
+  closeFileCtxMenu();
   try {
-    await StashFile(repoPath(), m.path)
-    await staging.load(repoPath())
-    toast.success(`Stashed ${m.path}`)
+    await StashFile(repoPath(), m.path);
+    await staging.load(repoPath());
+    toast.success(`Stashed ${m.path}`);
   } catch (e) {
-    toast.error(String(e))
+    toast.error(String(e));
   }
 }
 
 async function ctxIgnore(mode: 'file' | 'ext' | 'dir') {
-  const m = fileCtxMenu.value
-  if (!m) { return }
-  let pattern: string
+  const m = fileCtxMenu.value;
+  if (!m) { return; }
+  let pattern: string;
   if (mode === 'file') {
-    pattern = m.path
+    pattern = m.path;
   } else if (mode === 'ext') {
-    pattern = `*.${fileExt(m.path)}`
+    pattern = `*.${fileExt(m.path)}`;
   } else {
-    pattern = fileDir(m.path) || m.path
+    pattern = fileDir(m.path) || m.path;
   }
-  closeFileCtxMenu()
+  closeFileCtxMenu();
   try {
-    await AppendToGitignore(repoPath(), pattern)
-    await staging.load(repoPath())
-    toast.success(`Added "${pattern}" to .gitignore`)
+    await AppendToGitignore(repoPath(), pattern);
+    await staging.load(repoPath());
+    toast.success(`Added "${pattern}" to .gitignore`);
   } catch (e) {
-    toast.error(String(e))
+    toast.error(String(e));
   }
 }
 
 async function ctxOpenDefaultApp() {
-  const m = fileCtxMenu.value
-  if (!m) { return }
-  closeFileCtxMenu()
+  const m = fileCtxMenu.value;
+  if (!m) { return; }
+  closeFileCtxMenu();
   try {
-    await OpenInDefaultApp(repoPath(), m.path)
+    await OpenInDefaultApp(repoPath(), m.path);
   } catch (e) {
-    toast.error(String(e))
+    toast.error(String(e));
   }
 }
 
 async function ctxShowInFinder() {
-  const m = fileCtxMenu.value
-  if (!m) { return }
-  closeFileCtxMenu()
+  const m = fileCtxMenu.value;
+  if (!m) { return; }
+  closeFileCtxMenu();
   try {
-    await ShowInFinder(repoPath(), m.path)
+    await ShowInFinder(repoPath(), m.path);
   } catch (e) {
-    toast.error(String(e))
+    toast.error(String(e));
   }
 }
 
 async function ctxOpenInEditor() {
-  const m = fileCtxMenu.value
-  if (!m) { return }
-  closeFileCtxMenu()
+  const m = fileCtxMenu.value;
+  if (!m) { return; }
+  closeFileCtxMenu();
   try {
-    await OpenInEditor(repoPath(), m.path)
+    await OpenInEditor(repoPath(), m.path);
   } catch (e) {
-    toast.error(String(e))
+    toast.error(String(e));
   }
 }
 
 function ctxCopyPath() {
-  const m = fileCtxMenu.value
-  if (!m) { return }
-  closeFileCtxMenu()
-  navigator.clipboard.writeText(`${repoPath()}/${m.path}`)
-  toast.success('Path copied')
+  const m = fileCtxMenu.value;
+  if (!m) { return; }
+  closeFileCtxMenu();
+  navigator.clipboard.writeText(`${repoPath()}/${m.path}`);
+  toast.success('Path copied');
 }
 
 async function ctxSavePatch() {
-  const m = fileCtxMenu.value
-  if (!m) { return }
-  closeFileCtxMenu()
+  const m = fileCtxMenu.value;
+  if (!m) { return; }
+  closeFileCtxMenu();
   try {
-    await SavePatchFile(repoPath(), m.path)
+    await SavePatchFile(repoPath(), m.path);
   } catch (e) {
-    toast.error(String(e))
+    toast.error(String(e));
   }
 }
 
 async function ctxDeleteFile() {
-  const m = fileCtxMenu.value
-  if (!m) { return }
+  const m = fileCtxMenu.value;
+  if (!m) { return; }
   if (m.mode !== 'confirm-delete') {
-    fileCtxMenu.value = { ...m, mode: 'confirm-delete' }
-    return
+    fileCtxMenu.value = { ...m, mode: 'confirm-delete' };
+    return;
   }
-  const path = m.path
-  closeFileCtxMenu()
+  const path = m.path;
+  closeFileCtxMenu();
   try {
-    await DeleteWorkingFile(repoPath(), path)
-    await staging.load(repoPath())
+    await DeleteWorkingFile(repoPath(), path);
+    await staging.load(repoPath());
     if (staging.selectedPath === path) {
-      staging.selectedPath = null
+      staging.selectedPath = null;
     }
-    toast.success(`Deleted ${path}`)
+    toast.success(`Deleted ${path}`);
   } catch (e) {
-    toast.error(String(e))
+    toast.error(String(e));
   }
 }
 
@@ -401,148 +401,148 @@ const navigableFiles = computed((): NavEntry[] => [
   ...staging.conflictedFiles.map(f => ({ path: f.path, section: 'conflict' as const })),
   ...staging.unstagedFiles.map(f => ({ path: f.path, section: 'unstaged' as const })),
   ...staging.stagedFiles.map(f => ({ path: f.path, section: 'staged' as const })),
-])
+]);
 
 const currentNavIndex = computed(() => {
   if (!staging.selectedPath) {
-    return -1
+    return -1;
   }
   if (selectedIsConflict.value) {
-    return navigableFiles.value.findIndex(f => f.path === staging.selectedPath && f.section === 'conflict')
+    return navigableFiles.value.findIndex(f => f.path === staging.selectedPath && f.section === 'conflict');
   }
-  const section = staging.selectedMode === 'staged' ? 'staged' : 'unstaged'
-  return navigableFiles.value.findIndex(f => f.path === staging.selectedPath && f.section === section)
-})
+  const section = staging.selectedMode === 'staged' ? 'staged' : 'unstaged';
+  return navigableFiles.value.findIndex(f => f.path === staging.selectedPath && f.section === section);
+});
 
-const fileListScrollRef = ref<HTMLElement | null>(null)
+const fileListScrollRef = ref<HTMLElement | null>(null);
 
 function navigateTo(delta: number) {
-  const list = navigableFiles.value
+  const list = navigableFiles.value;
   if (!list.length) {
-    return
+    return;
   }
-  let idx = currentNavIndex.value
+  let idx = currentNavIndex.value;
   if (idx === -1) {
-    idx = delta > 0 ? -1 : list.length
+    idx = delta > 0 ? -1 : list.length;
   }
-  const next = Math.max(0, Math.min(list.length - 1, idx + delta))
-  const entry = list[next]
+  const next = Math.max(0, Math.min(list.length - 1, idx + delta));
+  const entry = list[next];
   if (entry.section === 'conflict') {
-    onSelectConflict(entry.path)
+    onSelectConflict(entry.path);
   } else {
-    onSelectFile(entry.path, entry.section)
+    onSelectFile(entry.path, entry.section);
   }
   nextTick(() => {
-    fileListScrollRef.value?.querySelector('.file-item.selected')?.scrollIntoView({ block: 'nearest' })
-  })
+    fileListScrollRef.value?.querySelector('.file-item.selected')?.scrollIntoView({ block: 'nearest' });
+  });
 }
 
 function onKeyDown(e: KeyboardEvent) {
   if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-    return
+    return;
   }
   if (e.key === 'ArrowUp') {
-    e.preventDefault()
-    navigateTo(-1)
+    e.preventDefault();
+    navigateTo(-1);
   } else if (e.key === 'ArrowDown') {
-    e.preventDefault()
-    navigateTo(1)
+    e.preventDefault();
+    navigateTo(1);
   }
 }
 
-onMounted(() => document.addEventListener('keydown', onKeyDown))
-onUnmounted(() => document.removeEventListener('keydown', onKeyDown))
+onMounted(() => document.addEventListener('keydown', onKeyDown));
+onUnmounted(() => document.removeEventListener('keydown', onKeyDown));
 
 // ── Image preview ─────────────────────────────────────────────────────────────
 
-const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'tiff', 'avif'])
+const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'tiff', 'avif']);
 const IMAGE_MIME: Record<string, string> = {
   png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif',
   webp: 'image/webp', svg: 'image/svg+xml', bmp: 'image/bmp',
   ico: 'image/x-icon', tiff: 'image/tiff', avif: 'image/avif',
-}
+};
 
 function isImageFile(path: string): boolean {
-  return IMAGE_EXTENSIONS.has(path.split('.').pop()?.toLowerCase() ?? '')
+  return IMAGE_EXTENSIONS.has(path.split('.').pop()?.toLowerCase() ?? '');
 }
 
-const selectedIsImage = computed(() => !!staging.selectedPath && isImageFile(staging.selectedPath))
+const selectedIsImage = computed(() => !!staging.selectedPath && isImageFile(staging.selectedPath));
 
-const imageLoading = ref(false)
-const imageSrc = ref<string | null>(null)
+const imageLoading = ref(false);
+const imageSrc = ref<string | null>(null);
 
 watch(
   () => [staging.selectedPath, staging.selectedMode] as const,
   async ([path]) => {
-    imageSrc.value = null
+    imageSrc.value = null;
     if (!path || !isImageFile(path)) {
-      return
+      return;
     }
-    imageLoading.value = true
+    imageLoading.value = true;
     try {
-      const b64 = await GetFileBase64(repoPath(), path)
-      const ext = path.split('.').pop()?.toLowerCase() ?? ''
-      imageSrc.value = `data:${IMAGE_MIME[ext] ?? 'image/png'};base64,${b64}`
+      const b64 = await GetFileBase64(repoPath(), path);
+      const ext = path.split('.').pop()?.toLowerCase() ?? '';
+      imageSrc.value = `data:${IMAGE_MIME[ext] ?? 'image/png'};base64,${b64}`;
     } catch {
-      imageSrc.value = null
+      imageSrc.value = null;
     } finally {
-      imageLoading.value = false
+      imageLoading.value = false;
     }
   },
-)
+);
 
 async function onConflictResolved() {
-  await staging.load(repoPath())
+  await staging.load(repoPath());
   if (!staging.conflictedFiles.find(f => f.path === staging.selectedPath)) {
-    staging.selectedPath = null
+    staging.selectedPath = null;
   }
 }
 
-const confirmingAbort = ref(false)
+const confirmingAbort = ref(false);
 
 async function doAbortMerge() {
-  confirmingAbort.value = false
+  confirmingAbort.value = false;
   try {
-    await AbortMerge(repoPath())
-    await Promise.all([staging.load(repoPath()), commits.load(repoPath()), branches.load(repoPath())])
-    staging.selectedPath = null
-    toast.success('Merge aborted')
+    await AbortMerge(repoPath());
+    await Promise.all([staging.load(repoPath()), commits.load(repoPath()), branches.load(repoPath())]);
+    staging.selectedPath = null;
+    toast.success('Merge aborted');
   } catch (e) {
-    toast.error(String(e))
+    toast.error(String(e));
   }
 }
 
-const confirmingAbortRebase = ref(false)
+const confirmingAbortRebase = ref(false);
 
 async function doContinueRebase() {
   try {
-    await ContinueRebase(repoPath())
-    await Promise.all([staging.load(repoPath()), commits.load(repoPath()), branches.load(repoPath())])
-    staging.selectedPath = null
+    await ContinueRebase(repoPath());
+    await Promise.all([staging.load(repoPath()), commits.load(repoPath()), branches.load(repoPath())]);
+    staging.selectedPath = null;
     if (staging.isInRebase) {
-      toast.success('Conflict resolved — next commit has conflicts, keep resolving')
+      toast.success('Conflict resolved — next commit has conflicts, keep resolving');
     } else {
-      toast.success('Rebase complete')
+      toast.success('Rebase complete');
     }
   } catch (e) {
-    await staging.load(repoPath())
+    await staging.load(repoPath());
     if (staging.isInRebase) {
-      toast.success('Conflict resolved — next commit has conflicts, keep resolving')
+      toast.success('Conflict resolved — next commit has conflicts, keep resolving');
     } else {
-      toast.error(String(e))
+      toast.error(String(e));
     }
   }
 }
 
 async function doAbortRebase() {
-  confirmingAbortRebase.value = false
+  confirmingAbortRebase.value = false;
   try {
-    await AbortRebase(repoPath())
-    await Promise.all([staging.load(repoPath()), commits.load(repoPath()), branches.load(repoPath())])
-    staging.selectedPath = null
-    toast.success('Rebase aborted')
+    await AbortRebase(repoPath());
+    await Promise.all([staging.load(repoPath()), commits.load(repoPath()), branches.load(repoPath())]);
+    staging.selectedPath = null;
+    toast.success('Rebase aborted');
   } catch (e) {
-    toast.error(String(e))
+    toast.error(String(e));
   }
 }
 </script>
@@ -579,174 +579,174 @@ async function doAbortRebase() {
     </div>
 
     <div class="staging-view">
-    <!-- File list panel (fixed width, has its own scroll + commit panel) -->
-    <div class="file-panel" :style="{ width: fileListWidth + 'px' }">
+      <!-- File list panel (fixed width, has its own scroll + commit panel) -->
+      <div class="file-panel" :style="{ width: fileListWidth + 'px' }">
 
-      <!-- Scrollable file list area -->
-      <div ref="fileListScrollRef" class="file-list-scroll">
-        <div class="staging-toolbar">
-          <button class="toolbar-btn" @click="staging.load(repoPath())" title="Refresh status">⟳ Refresh</button>
-        </div>
+        <!-- Scrollable file list area -->
+        <div ref="fileListScrollRef" class="file-list-scroll">
+          <div class="staging-toolbar">
+            <button class="toolbar-btn" title="Refresh status" @click="staging.load(repoPath())">⟳ Refresh</button>
+          </div>
 
-        <div v-if="staging.loading" class="list-loading">Loading…</div>
-        <template v-else>
-          <!-- Conflicts section (only shown during a merge) -->
-          <template v-if="staging.conflictedFiles.length">
-            <div class="section-header conflict-header-section">
-              <span>Conflicts ({{ staging.conflictedFiles.length }})</span>
+          <div v-if="staging.loading" class="list-loading">Loading…</div>
+          <template v-else>
+            <!-- Conflicts section (only shown during a merge) -->
+            <template v-if="staging.conflictedFiles.length">
+              <div class="section-header conflict-header-section">
+                <span>Conflicts ({{ staging.conflictedFiles.length }})</span>
+              </div>
+              <div
+                v-for="file in staging.conflictedFiles"
+                :key="file.path + ':conflict'"
+                class="file-item file-item--conflict"
+                :class="{ selected: staging.selectedPath === file.path }"
+                @click="onSelectConflict(file.path)"
+                @contextmenu="openFileCtxMenu($event, file.path, 'conflict')"
+              >
+                <span class="status-code sc-conflict">!</span>
+                <span class="file-name" :title="file.path">{{ shortPath(file.path) }}</span>
+              </div>
+            </template>
+
+            <!-- Unstaged section -->
+            <div class="section-header">
+              <span>Unstaged ({{ staging.unstagedFiles.length }})</span>
+              <button v-if="staging.unstagedFiles.length" class="section-btn" @click="onStageAll">
+                Stage All
+              </button>
             </div>
+            <div v-if="!staging.unstagedFiles.length" class="empty-section">Clean</div>
             <div
-              v-for="file in staging.conflictedFiles"
-              :key="file.path + ':conflict'"
-              class="file-item file-item--conflict"
-              :class="{ selected: staging.selectedPath === file.path }"
-              @click="onSelectConflict(file.path)"
-              @contextmenu="openFileCtxMenu($event, file.path, 'conflict')"
+              v-for="file in staging.unstagedFiles"
+              :key="file.path"
+              class="file-item"
+              :class="{ selected: staging.selectedPath === file.path && staging.selectedMode === 'unstaged' }"
+              @click="onSelectFile(file.path, 'unstaged')"
+              @contextmenu="openFileCtxMenu($event, file.path, 'unstaged')"
             >
-              <span class="status-code sc-conflict">!</span>
+              <span class="status-code" :class="`sc-${file.unstaged.trim() || 'q'}`">
+                {{ STATUS_LABELS[file.unstaged] ?? file.unstaged }}
+              </span>
               <span class="file-name" :title="file.path">{{ shortPath(file.path) }}</span>
+              <button class="inline-btn stage-inline" title="Stage file" @click.stop="onStageFile(file.path)">+</button>
+            </div>
+
+            <!-- Staged section -->
+            <div class="section-header staged-header">
+              <span>Staged ({{ staging.stagedFiles.length }})</span>
+              <button v-if="staging.stagedFiles.length" class="section-btn" @click="onUnstageAll">
+                Unstage All
+              </button>
+            </div>
+            <div v-if="!staging.stagedFiles.length" class="empty-section">Nothing staged</div>
+            <div
+              v-for="file in staging.stagedFiles"
+              :key="file.path + ':staged'"
+              class="file-item"
+              :class="{ selected: staging.selectedPath === file.path && staging.selectedMode === 'staged' }"
+              @click="onSelectFile(file.path, 'staged')"
+              @contextmenu="openFileCtxMenu($event, file.path, 'staged')"
+            >
+              <span class="status-code" :class="`sc-${file.staged.trim() || 'q'}`">
+                {{ STATUS_LABELS[file.staged] ?? file.staged }}
+              </span>
+              <span class="file-name" :title="file.path">{{ shortPath(file.path) }}</span>
+              <button class="inline-btn unstage-inline" title="Unstage file" @click.stop="onUnstageFile(file.path)">−</button>
             </div>
           </template>
-
-          <!-- Unstaged section -->
-          <div class="section-header">
-            <span>Unstaged ({{ staging.unstagedFiles.length }})</span>
-            <button v-if="staging.unstagedFiles.length" class="section-btn" @click="onStageAll">
-              Stage All
-            </button>
-          </div>
-          <div v-if="!staging.unstagedFiles.length" class="empty-section">Clean</div>
-          <div
-            v-for="file in staging.unstagedFiles"
-            :key="file.path"
-            class="file-item"
-            :class="{ selected: staging.selectedPath === file.path && staging.selectedMode === 'unstaged' }"
-            @click="onSelectFile(file.path, 'unstaged')"
-            @contextmenu="openFileCtxMenu($event, file.path, 'unstaged')"
-          >
-            <span class="status-code" :class="`sc-${file.unstaged.trim() || 'q'}`">
-              {{ STATUS_LABELS[file.unstaged] ?? file.unstaged }}
-            </span>
-            <span class="file-name" :title="file.path">{{ shortPath(file.path) }}</span>
-            <button class="inline-btn stage-inline" @click.stop="onStageFile(file.path)" title="Stage file">+</button>
-          </div>
-
-          <!-- Staged section -->
-          <div class="section-header staged-header">
-            <span>Staged ({{ staging.stagedFiles.length }})</span>
-            <button v-if="staging.stagedFiles.length" class="section-btn" @click="onUnstageAll">
-              Unstage All
-            </button>
-          </div>
-          <div v-if="!staging.stagedFiles.length" class="empty-section">Nothing staged</div>
-          <div
-            v-for="file in staging.stagedFiles"
-            :key="file.path + ':staged'"
-            class="file-item"
-            :class="{ selected: staging.selectedPath === file.path && staging.selectedMode === 'staged' }"
-            @click="onSelectFile(file.path, 'staged')"
-            @contextmenu="openFileCtxMenu($event, file.path, 'staged')"
-          >
-            <span class="status-code" :class="`sc-${file.staged.trim() || 'q'}`">
-              {{ STATUS_LABELS[file.staged] ?? file.staged }}
-            </span>
-            <span class="file-name" :title="file.path">{{ shortPath(file.path) }}</span>
-            <button class="inline-btn unstage-inline" @click.stop="onUnstageFile(file.path)" title="Unstage file">−</button>
-          </div>
-        </template>
-      </div>
-
-      <!-- Commit panel — pinned at bottom -->
-      <div class="commit-panel">
-        <!-- During rebase: show Continue button instead of normal commit form -->
-        <template v-if="staging.isInRebase">
-          <div class="rebase-action-hint">Resolve all conflicts above, then continue the rebase.</div>
-          <button
-            class="commit-btn rebase-continue-btn"
-            :disabled="staging.conflictedFiles.length > 0"
-            @click="doContinueRebase"
-          >
-            <span v-if="staging.conflictedFiles.length > 0">Resolve {{ staging.conflictedFiles.length }} conflict(s) first</span>
-            <span v-else>↪ Continue Rebase</span>
-          </button>
-        </template>
-
-        <template v-else>
-          <label class="amend-row">
-            <input type="checkbox" v-model="amend" @change="onAmendToggle" />
-            <span>Amend previous commit</span>
-          </label>
-
-          <div class="summary-row">
-            <textarea
-              v-model="commitSummary"
-              class="summary-input"
-              placeholder="Commit summary"
-              rows="2"
-              maxlength="200"
-            />
-            <span class="char-count" :class="{ over: summaryRemaining < 0, warn: summaryRemaining < 10 && summaryRemaining >= 0 }">
-              {{ summaryRemaining }}
-            </span>
-          </div>
-
-          <textarea
-            v-model="commitDescription"
-            class="desc-input"
-            placeholder="Description (optional)"
-            rows="2"
-          />
-
-          <button
-            class="commit-btn"
-            :class="{ ready: canCommit && commitSummary.trim() }"
-            :disabled="!canCommit"
-            @click="onCommit"
-          >
-            <span v-if="committing">Committing…</span>
-            <span v-else-if="!commitSummary.trim() && !amend">Type a message to commit</span>
-            <span v-else>
-              ○ Commit to <strong>{{ currentBranch }}</strong>
-            </span>
-          </button>
-        </template>
-      </div>
-    </div>
-
-    <!-- Resize handle -->
-    <div class="resize-handle" @mousedown.prevent="startResize" />
-
-    <!-- Diff / hunk panel -->
-    <div class="diff-panel">
-      <div v-if="!staging.selectedPath" class="diff-empty">Select a file to view changes</div>
-      <ConflictView
-        v-else-if="selectedIsConflict"
-        :repo-path="repoPath()"
-        :path="staging.selectedPath!"
-        @resolved="onConflictResolved"
-      />
-      <div v-else-if="selectedIsImage" class="image-preview-panel">
-        <div class="image-preview-header">{{ staging.selectedPath }}</div>
-        <div v-if="imageLoading" class="image-preview-loading">Loading…</div>
-        <div v-else-if="imageSrc" class="image-preview-container">
-          <img :src="imageSrc" class="image-preview-img" :alt="staging.selectedPath ?? ''" />
         </div>
-        <div v-else class="image-preview-missing">File not found on disk</div>
+
+        <!-- Commit panel — pinned at bottom -->
+        <div class="commit-panel">
+          <!-- During rebase: show Continue button instead of normal commit form -->
+          <template v-if="staging.isInRebase">
+            <div class="rebase-action-hint">Resolve all conflicts above, then continue the rebase.</div>
+            <button
+              class="commit-btn rebase-continue-btn"
+              :disabled="staging.conflictedFiles.length > 0"
+              @click="doContinueRebase"
+            >
+              <span v-if="staging.conflictedFiles.length > 0">Resolve {{ staging.conflictedFiles.length }} conflict(s) first</span>
+              <span v-else>↪ Continue Rebase</span>
+            </button>
+          </template>
+
+          <template v-else>
+            <label class="amend-row">
+              <input v-model="amend" type="checkbox" @change="onAmendToggle" />
+              <span>Amend previous commit</span>
+            </label>
+
+            <div class="summary-row">
+              <textarea
+                v-model="commitSummary"
+                class="summary-input"
+                placeholder="Commit summary"
+                rows="2"
+                maxlength="200"
+              />
+              <span class="char-count" :class="{ over: summaryRemaining < 0, warn: summaryRemaining < 10 && summaryRemaining >= 0 }">
+                {{ summaryRemaining }}
+              </span>
+            </div>
+
+            <textarea
+              v-model="commitDescription"
+              class="desc-input"
+              placeholder="Description (optional)"
+              rows="2"
+            />
+
+            <button
+              class="commit-btn"
+              :class="{ ready: canCommit && commitSummary.trim() }"
+              :disabled="!canCommit"
+              @click="onCommit"
+            >
+              <span v-if="committing">Committing…</span>
+              <span v-else-if="!commitSummary.trim() && !amend">Type a message to commit</span>
+              <span v-else>
+                ○ Commit to <strong>{{ currentBranch }}</strong>
+              </span>
+            </button>
+          </template>
+        </div>
       </div>
-      <HunkSelector
-        v-else
-        :diffs="staging.diff"
-        :mode="staging.selectedMode === 'staged' ? 'unstage' : 'stage'"
-        :path="staging.selectedPath"
-        :diff-loading="staging.diffLoading"
-        @stage-file="onStageFile(staging.selectedPath!)"
-        @unstage-file="onUnstageFile(staging.selectedPath!)"
-        @discard-file="onDiscardFile(staging.selectedPath!)"
-        @stage-hunk="onStageHunk"
-        @unstage-hunk="onUnstageHunk"
-      />
+
+      <!-- Resize handle -->
+      <div class="resize-handle" @mousedown.prevent="startResize" />
+
+      <!-- Diff / hunk panel -->
+      <div class="diff-panel">
+        <div v-if="!staging.selectedPath" class="diff-empty">Select a file to view changes</div>
+        <ConflictView
+          v-else-if="selectedIsConflict"
+          :repo-path="repoPath()"
+          :path="staging.selectedPath!"
+          @resolved="onConflictResolved"
+        />
+        <div v-else-if="selectedIsImage" class="image-preview-panel">
+          <div class="image-preview-header">{{ staging.selectedPath }}</div>
+          <div v-if="imageLoading" class="image-preview-loading">Loading…</div>
+          <div v-else-if="imageSrc" class="image-preview-container">
+            <img :src="imageSrc" class="image-preview-img" :alt="staging.selectedPath ?? ''" />
+          </div>
+          <div v-else class="image-preview-missing">File not found on disk</div>
+        </div>
+        <HunkSelector
+          v-else
+          :diffs="staging.diff"
+          :mode="staging.selectedMode === 'staged' ? 'unstage' : 'stage'"
+          :path="staging.selectedPath"
+          :diff-loading="staging.diffLoading"
+          @stage-file="onStageFile(staging.selectedPath!)"
+          @unstage-file="onUnstageFile(staging.selectedPath!)"
+          @discard-file="onDiscardFile(staging.selectedPath!)"
+          @stage-hunk="onStageHunk"
+          @unstage-hunk="onUnstageHunk"
+        />
+      </div>
     </div>
-  </div>
   </div>
 
   <!-- File context menu (teleported to escape overflow clipping) -->
@@ -797,10 +797,10 @@ async function doAbortRebase() {
         <button class="ctx-menu-item" @click="fileCtxMenu!.mode = 'default'">← Back</button>
         <div class="ctx-menu-divider" />
         <button class="ctx-menu-item" @click="ctxIgnore('file')">Ignore this file</button>
-        <button class="ctx-menu-item" @click="ctxIgnore('ext')" :disabled="!fileExt(fileCtxMenu.path)">
+        <button class="ctx-menu-item" :disabled="!fileExt(fileCtxMenu.path)" @click="ctxIgnore('ext')">
           Ignore all *.{{ fileExt(fileCtxMenu.path) }} files
         </button>
-        <button class="ctx-menu-item" @click="ctxIgnore('dir')" :disabled="!fileDir(fileCtxMenu.path)">
+        <button class="ctx-menu-item" :disabled="!fileDir(fileCtxMenu.path)" @click="ctxIgnore('dir')">
           Ignore containing folder
         </button>
       </template>

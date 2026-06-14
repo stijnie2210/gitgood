@@ -1,31 +1,86 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useCommitsStore } from '../../stores/commits'
+import { computed, ref, watch, watchEffect } from 'vue';
+import { useCommitsStore } from '../../stores/commits';
+import { useReposStore } from '../../stores/repos';
+import { GetFileAtCommitBase64 } from '../../../wailsjs/go/main/App';
 
-const commits = useCommitsStore()
+const commits = useCommitsStore();
+const repos = useReposStore();
 
 const selectedRow = computed(() =>
   commits.rows.find(r => r.hash === commits.selectedHash) ?? null
-)
+);
 
-// Track collapsed state per file index
-const collapsed = ref<Set<number>>(new Set())
+const collapsed = ref<Set<number>>(new Set());
 
 function toggle(i: number) {
-  const s = new Set(collapsed.value)
-  if (s.has(i)) s.delete(i)
-  else s.add(i)
-  collapsed.value = s
+  const s = new Set(collapsed.value);
+  if (s.has(i)) {s.delete(i);}
+  else {s.add(i);}
+  collapsed.value = s;
 }
 
-// Reset collapse state when diff changes
-const prevHash = ref<string | null>(null)
-computed(() => {
+const prevHash = ref<string | null>(null);
+watchEffect(() => {
   if (commits.selectedHash !== prevHash.value) {
-    prevHash.value = commits.selectedHash
-    collapsed.value = new Set()
+    prevHash.value = commits.selectedHash;
+    collapsed.value = new Set();
   }
-})
+});
+
+// ── Image preview ─────────────────────────────────────────────────────────────
+
+const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'tiff', 'avif']);
+const IMAGE_MIME: Record<string, string> = {
+  png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif',
+  webp: 'image/webp', svg: 'image/svg+xml', bmp: 'image/bmp',
+  ico: 'image/x-icon', tiff: 'image/tiff', avif: 'image/avif',
+};
+
+function isImageFile(path: string): boolean {
+  return IMAGE_EXTENSIONS.has(path.split('.').pop()?.toLowerCase() ?? '');
+}
+
+const imageCache = ref<Map<string, string>>(new Map());
+const imageLoadingPaths = ref<Set<string>>(new Set());
+
+watch(
+  () => commits.diff,
+  async (diff) => {
+    imageCache.value = new Map();
+    imageLoadingPaths.value = new Set();
+    const hash = commits.selectedHash;
+    const repoPath = repos.activeRepo?.path;
+    if (!hash || !repoPath) {
+      return;
+    }
+    for (const file of diff) {
+      if (!file.isBinary) {
+        continue;
+      }
+      const path = file.newPath || file.oldPath;
+      if (!path || !isImageFile(path)) {
+        continue;
+      }
+      const loading = new Set(imageLoadingPaths.value);
+      loading.add(path);
+      imageLoadingPaths.value = loading;
+      try {
+        const b64 = await GetFileAtCommitBase64(repoPath, hash, path);
+        const ext = path.split('.').pop()?.toLowerCase() ?? '';
+        const cache = new Map(imageCache.value);
+        cache.set(path, `data:${IMAGE_MIME[ext] ?? 'image/png'};base64,${b64}`);
+        imageCache.value = cache;
+      } catch {
+        // leave absent — template shows fallback text
+      } finally {
+        const loading2 = new Set(imageLoadingPaths.value);
+        loading2.delete(path);
+        imageLoadingPaths.value = loading2;
+      }
+    }
+  },
+);
 </script>
 
 <template>
@@ -70,7 +125,20 @@ computed(() => {
 
         <!-- Hunks — hidden when collapsed -->
         <template v-if="!collapsed.has(fi)">
-          <div v-if="file.isBinary" class="binary-notice">Binary file not shown</div>
+          <template v-if="file.isBinary">
+            <template v-if="isImageFile(file.newPath || file.oldPath || '')">
+              <div v-if="imageLoadingPaths.has(file.newPath || file.oldPath || '')" class="binary-notice">Loading…</div>
+              <div v-else-if="imageCache.get(file.newPath || file.oldPath || '')" class="image-preview-container">
+                <img
+                  :src="imageCache.get(file.newPath || file.oldPath || '')!"
+                  class="image-preview-img"
+                  :alt="file.newPath || file.oldPath || ''"
+                />
+              </div>
+              <div v-else class="binary-notice">Image not available at this commit</div>
+            </template>
+            <div v-else class="binary-notice">Binary file not shown</div>
+          </template>
 
           <div v-for="(hunk, hi) in file.hunks" :key="hi" class="hunk">
             <div class="hunk-header">{{ hunk.header }}</div>
@@ -153,6 +221,22 @@ computed(() => {
 .stat-del { color: #f74f4f; }
 
 .binary-notice { padding: 8px 12px; color: #555; font-size: 11px; font-style: italic; }
+
+.image-preview-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #0a0a14;
+}
+
+.image-preview-img {
+  max-width: 100%;
+  max-height: 480px;
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+}
 
 .hunk-header {
   padding: 2px 10px;

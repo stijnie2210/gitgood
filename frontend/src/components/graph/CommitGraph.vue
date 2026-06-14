@@ -1,31 +1,31 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
-import { useVirtualizer } from '@tanstack/vue-virtual'
-import { useCommitsStore } from '../../stores/commits'
-import { useReposStore } from '../../stores/repos'
-import { CELL_W } from './graphRenderer'
-import CommitRow from './CommitRow.vue'
-import CommitContextMenu from './CommitContextMenu.vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
+import { useVirtualizer } from '@tanstack/vue-virtual';
+import { useCommitsStore } from '../../stores/commits';
+import { useReposStore } from '../../stores/repos';
+import { CELL_W } from './graphRenderer';
+import CommitRow from './CommitRow.vue';
+import CommitContextMenu from './CommitContextMenu.vue';
 
-const ROW_H = 28
+const ROW_H = 28;
 
-const repos = useReposStore()
-const commits = useCommitsStore()
+const repos = useReposStore();
+const commits = useCommitsStore();
 
-const parentRef = ref<HTMLElement | null>(null)
-const searchQuery = ref('')
-const searchVisible = ref(false)
-const searchInputRef = ref<HTMLInputElement | null>(null)
+const parentRef = ref<HTMLElement | null>(null);
+const searchQuery = ref('');
+const searchVisible = ref(false);
+const searchInputRef = ref<HTMLInputElement | null>(null);
 
 const filteredRows = computed(() => {
-  const q = searchQuery.value.trim().toLowerCase()
-  if (!q) return commits.rows
+  const q = searchQuery.value.trim().toLowerCase();
+  if (!q) {return commits.rows;}
   return commits.rows.filter(r =>
     r.hash.startsWith(q) ||
     r.subject.toLowerCase().includes(q) ||
     r.author.toLowerCase().includes(q)
-  )
-})
+  );
+});
 
 const virtualizer = useVirtualizer(
   computed(() => ({
@@ -34,80 +34,80 @@ const virtualizer = useVirtualizer(
     estimateSize: () => ROW_H,
     overscan: 15,
   }))
-)
+);
 
-const items = computed(() => virtualizer.value.getVirtualItems())
-const totalSize = computed(() => virtualizer.value.getTotalSize())
-const graphWidth = computed(() => (commits.maxColumn + 2) * CELL_W)
+const items = computed(() => virtualizer.value.getVirtualItems());
+const totalSize = computed(() => virtualizer.value.getTotalSize());
+const graphWidth = computed(() => (commits.maxColumn + 2) * CELL_W);
 
 watch(
   () => repos.activeRepo?.path,
   path => {
-    if (path) commits.load(path)
-    else commits.clear()
+    if (path) {commits.load(path);}
+    else {commits.clear();}
   },
   { immediate: true },
-)
+);
 
 // Scroll to top when search results change so first match is visible
 watch(filteredRows, () => {
-  virtualizer.value.scrollToIndex(0)
-})
+  virtualizer.value.scrollToIndex(0);
+});
 
 function openSearch() {
-  searchVisible.value = true
-  nextTick(() => searchInputRef.value?.focus())
+  searchVisible.value = true;
+  nextTick(() => searchInputRef.value?.focus());
 }
 
 function closeSearch() {
-  searchVisible.value = false
-  searchQuery.value = ''
+  searchVisible.value = false;
+  searchQuery.value = '';
 }
 
 function onGlobalKeyDown(e: KeyboardEvent) {
   if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
-    e.preventDefault()
-    openSearch()
+    e.preventDefault();
+    openSearch();
   }
 }
 
 function onSearchKeyDown(e: KeyboardEvent) {
-  if (e.key === 'Escape') closeSearch()
+  if (e.key === 'Escape') {closeSearch();}
 }
 
 function onScroll() {
-  const el = parentRef.value
-  if (!el || commits.loadingMore || !commits.hasMore) return
+  const el = parentRef.value;
+  if (!el || commits.loadingMore || !commits.hasMore) {return;}
   if (el.scrollTop + el.clientHeight >= el.scrollHeight - 300) {
-    commits.loadMore()
+    commits.loadMore();
   }
 }
 
-onMounted(() => window.addEventListener('keydown', onGlobalKeyDown))
-onUnmounted(() => window.removeEventListener('keydown', onGlobalKeyDown))
+onMounted(() => window.addEventListener('keydown', onGlobalKeyDown));
+onUnmounted(() => window.removeEventListener('keydown', onGlobalKeyDown));
 
 function onRowClick(index: number) {
-  const row = filteredRows.value[index]
+  const row = filteredRows.value[index];
   if (row && repos.activeRepo) {
-    commits.selectCommit(repos.activeRepo.path, row.hash)
+    commits.selectCommit(repos.activeRepo.path, row.hash);
   }
 }
 
 // Context menu
-const menu = ref<{ x: number; y: number; index: number } | null>(null)
+const menu = ref<{ x: number; y: number; index: number } | null>(null);
 
 function onRowContextMenu(index: number, e: MouseEvent) {
-  menu.value = { x: e.clientX, y: e.clientY, index }
+  menu.value = { x: e.clientX, y: e.clientY, index };
 }
 
 function closeMenu() {
-  menu.value = null
+  menu.value = null;
 }
 
 async function onMenuRefresh() {
-  menu.value = null
+  menu.value = null;
   if (repos.activeRepo) {
-    await commits.load(repos.activeRepo.path)
+    await commits.load(repos.activeRepo.path);
   }
 }
 </script>
@@ -123,7 +123,7 @@ async function onMenuRefresh() {
         placeholder="Search commits…"
         @keydown="onSearchKeyDown"
       />
-      <span class="search-count" v-if="searchQuery.trim()">
+      <span v-if="searchQuery.trim()" class="search-count">
         {{ filteredRows.length }} result{{ filteredRows.length === 1 ? '' : 's' }}
       </span>
       <button class="search-close" @click="closeSearch">×</button>

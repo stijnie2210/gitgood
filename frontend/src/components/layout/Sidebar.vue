@@ -1,58 +1,58 @@
 <script setup lang="ts">
-import { watch, ref, nextTick, onMounted, onUnmounted } from 'vue'
-import { clampMenuPosition } from '../../composables/useContextMenu'
-import { useReposStore } from '../../stores/repos'
-import { useBranchesStore } from '../../stores/branches'
-import { useCommitsStore } from '../../stores/commits'
-import { useStagingStore } from '../../stores/staging'
-import { useToastStore } from '../../stores/toast'
-import { StartRebase, DeleteBranch, RenameBranch, PushNamedBranch } from '../../../wailsjs/go/main/App'
+import { watch, ref, nextTick, onMounted, onUnmounted } from 'vue';
+import { clampMenuPosition } from '../../composables/useContextMenu';
+import { useReposStore } from '../../stores/repos';
+import { useBranchesStore } from '../../stores/branches';
+import { useCommitsStore } from '../../stores/commits';
+import { useStagingStore } from '../../stores/staging';
+import { useToastStore } from '../../stores/toast';
+import { StartRebase, DeleteBranch, RenameBranch, PushNamedBranch } from '../../../wailsjs/go/main/App';
 
-const repos = useReposStore()
-const branches = useBranchesStore()
-const commits = useCommitsStore()
-const staging = useStagingStore()
-const toast = useToastStore()
+const repos = useReposStore();
+const branches = useBranchesStore();
+const commits = useCommitsStore();
+const staging = useStagingStore();
+const toast = useToastStore();
 
 watch(
   () => repos.activeRepo?.path,
   path => {
     if (path) {
-      branches.load(path)
+      branches.load(path);
     } else {
-      branches.clear()
+      branches.clear();
     }
   },
   { immediate: true }
-)
+);
 
 async function switchTo(target: string, trackRemote: boolean) {
-  const repoPath = repos.activeRepo?.path
+  const repoPath = repos.activeRepo?.path;
   if (!repoPath) {
-    return
+    return;
   }
 
   if (!trackRemote) {
-    const current = branches.local.find(b => b.isCurrent)
+    const current = branches.local.find(b => b.isCurrent);
     if (current?.name === target) {
-      return
+      return;
     }
   }
 
   try {
-    const result = await branches.switchBranch(repoPath, target, trackRemote)
+    const result = await branches.switchBranch(repoPath, target, trackRemote);
     await Promise.all([
       branches.load(repoPath),
       commits.load(repoPath),
       staging.load(repoPath),
-    ])
+    ]);
     if (result.conflictFiles && result.conflictFiles.length > 0) {
-      toast.error(result.message + ': ' + result.conflictFiles.join(', '))
+      toast.error(result.message + ': ' + result.conflictFiles.join(', '));
     } else {
-      toast.success(result.message)
+      toast.success(result.message);
     }
   } catch (e: unknown) {
-    toast.error(String(e))
+    toast.error(String(e));
   }
 }
 
@@ -71,139 +71,139 @@ interface CtxMenu {
   renameValue: string
 }
 
-const ctxMenu = ref<CtxMenu | null>(null)
-const renameInputRef = ref<HTMLInputElement | null>(null)
+const ctxMenu = ref<CtxMenu | null>(null);
+const renameInputRef = ref<HTMLInputElement | null>(null);
 
 async function openCtxMenu(e: MouseEvent, target: string, label: string, isLocal: boolean, isCurrent: boolean) {
-  e.preventDefault()
-  e.stopPropagation()
-  ctxMenu.value = { x: e.clientX, y: e.clientY, target, label, isLocal, isCurrent, mode: 'default', renameValue: label }
-  await nextTick()
-  const menu = document.getElementById('branch-ctx-menu')
+  e.preventDefault();
+  e.stopPropagation();
+  ctxMenu.value = { x: e.clientX, y: e.clientY, target, label, isLocal, isCurrent, mode: 'default', renameValue: label };
+  await nextTick();
+  const menu = document.getElementById('branch-ctx-menu');
   if (menu && ctxMenu.value) {
-    const { x, y } = clampMenuPosition(menu, e.clientX, e.clientY)
-    ctxMenu.value = { ...ctxMenu.value, x, y }
+    const { x, y } = clampMenuPosition(menu, e.clientX, e.clientY);
+    ctxMenu.value = { ...ctxMenu.value, x, y };
   }
 }
 
 function closeCtxMenu() {
-  ctxMenu.value = null
+  ctxMenu.value = null;
 }
 
 function onWindowMouseDown(e: MouseEvent) {
-  const menu = document.getElementById('branch-ctx-menu')
+  const menu = document.getElementById('branch-ctx-menu');
   if (menu && !menu.contains(e.target as Node)) {
-    closeCtxMenu()
+    closeCtxMenu();
   }
 }
 
-onMounted(() => window.addEventListener('mousedown', onWindowMouseDown))
-onUnmounted(() => window.removeEventListener('mousedown', onWindowMouseDown))
+onMounted(() => window.addEventListener('mousedown', onWindowMouseDown));
+onUnmounted(() => window.removeEventListener('mousedown', onWindowMouseDown));
 
 async function rebaseOnto(target: string) {
-  closeCtxMenu()
-  const repoPath = repos.activeRepo?.path
+  closeCtxMenu();
+  const repoPath = repos.activeRepo?.path;
   if (!repoPath) {
-    return
+    return;
   }
   try {
-    await StartRebase(repoPath, target)
-    await Promise.all([branches.load(repoPath), commits.load(repoPath), staging.load(repoPath)])
-    toast.success('Rebased onto ' + target)
+    await StartRebase(repoPath, target);
+    await Promise.all([branches.load(repoPath), commits.load(repoPath), staging.load(repoPath)]);
+    toast.success('Rebased onto ' + target);
   } catch {
-    await staging.load(repoPath)
+    await staging.load(repoPath);
     if (staging.isInRebase) {
-      await Promise.all([branches.load(repoPath), commits.load(repoPath)])
-      toast.success('Rebase started — switch to Working Tree to resolve conflicts')
+      await Promise.all([branches.load(repoPath), commits.load(repoPath)]);
+      toast.success('Rebase started — switch to Working Tree to resolve conflicts');
     } else {
-      await staging.load(repoPath)
-      toast.error('Rebase failed — check Working Tree view for details')
+      await staging.load(repoPath);
+      toast.error('Rebase failed — check Working Tree view for details');
     }
   }
 }
 
 async function pushBranch() {
-  const menu = ctxMenu.value
-  const repoPath = repos.activeRepo?.path
-  closeCtxMenu()
+  const menu = ctxMenu.value;
+  const repoPath = repos.activeRepo?.path;
+  closeCtxMenu();
   if (!menu || !repoPath) {
-    return
+    return;
   }
   try {
-    await PushNamedBranch(repoPath, menu.target)
-    toast.success('Pushed ' + menu.label)
+    await PushNamedBranch(repoPath, menu.target);
+    toast.success('Pushed ' + menu.label);
   } catch (e: unknown) {
-    toast.error(String(e))
+    toast.error(String(e));
   }
 }
 
 async function copyBranchName() {
-  const menu = ctxMenu.value
-  closeCtxMenu()
+  const menu = ctxMenu.value;
+  closeCtxMenu();
   if (!menu) {
-    return
+    return;
   }
-  await navigator.clipboard.writeText(menu.label)
-  toast.success('Copied: ' + menu.label)
+  await navigator.clipboard.writeText(menu.label);
+  toast.success('Copied: ' + menu.label);
 }
 
 function startRename() {
   if (!ctxMenu.value) {
-    return
+    return;
   }
-  ctxMenu.value.mode = 'rename'
-  ctxMenu.value.renameValue = ctxMenu.value.target
+  ctxMenu.value.mode = 'rename';
+  ctxMenu.value.renameValue = ctxMenu.value.target;
   nextTick(() => {
-    renameInputRef.value?.select()
-  })
+    renameInputRef.value?.select();
+  });
 }
 
 async function confirmRename() {
-  const menu = ctxMenu.value
-  const repoPath = repos.activeRepo?.path
+  const menu = ctxMenu.value;
+  const repoPath = repos.activeRepo?.path;
   if (!menu || !repoPath) {
-    closeCtxMenu()
-    return
+    closeCtxMenu();
+    return;
   }
-  const newName = menu.renameValue.trim()
+  const newName = menu.renameValue.trim();
   if (!newName || newName === menu.target) {
-    closeCtxMenu()
-    return
+    closeCtxMenu();
+    return;
   }
-  closeCtxMenu()
+  closeCtxMenu();
   try {
-    await RenameBranch(repoPath, menu.target, newName)
-    await branches.load(repoPath)
-    toast.success('Renamed to ' + newName)
+    await RenameBranch(repoPath, menu.target, newName);
+    await branches.load(repoPath);
+    toast.success('Renamed to ' + newName);
   } catch (e: unknown) {
-    toast.error(String(e))
+    toast.error(String(e));
   }
 }
 
 function startDelete() {
   if (!ctxMenu.value) {
-    return
+    return;
   }
-  ctxMenu.value.mode = 'confirm-delete'
+  ctxMenu.value.mode = 'confirm-delete';
 }
 
 async function confirmDelete(force: boolean) {
-  const menu = ctxMenu.value
-  const repoPath = repos.activeRepo?.path
-  closeCtxMenu()
+  const menu = ctxMenu.value;
+  const repoPath = repos.activeRepo?.path;
+  closeCtxMenu();
   if (!menu || !repoPath) {
-    return
+    return;
   }
   try {
-    await DeleteBranch(repoPath, menu.target, force)
-    await branches.load(repoPath)
-    toast.success('Deleted ' + menu.label)
+    await DeleteBranch(repoPath, menu.target, force);
+    await branches.load(repoPath);
+    toast.success('Deleted ' + menu.label);
   } catch (e: unknown) {
-    const msg = String(e)
+    const msg = String(e);
     if (!force && msg.toLowerCase().includes('not fully merged')) {
-      toast.error('"' + menu.label + '" is not fully merged. Use force delete if you\'re sure.')
+      toast.error('"' + menu.label + '" is not fully merged. Use force delete if you\'re sure.');
     } else {
-      toast.error(msg)
+      toast.error(msg);
     }
   }
 }

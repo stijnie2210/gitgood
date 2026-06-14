@@ -40,6 +40,8 @@ export function GetCommitGraph(arg1:string,arg2:number):Promise<Array<graph.Grap
 
 export function GetConflictContent(arg1:string,arg2:string):Promise<repo.ConflictContent>;
 
+export function GetFileAtCommitBase64(arg1:string,arg2:string,arg3:string):Promise<string>;
+
 export function GetFileBase64(arg1:string,arg2:string):Promise<string>;
 
 export function GetLastCommitSubject(arg1:string):Promise<string>;

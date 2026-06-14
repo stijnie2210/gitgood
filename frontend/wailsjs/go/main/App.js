@@ -74,6 +74,10 @@ export function GetConflictContent(arg1, arg2) {
   return window['go']['main']['App']['GetConflictContent'](arg1, arg2);
 }
 
+export function GetFileAtCommitBase64(arg1, arg2, arg3) {
+  return window['go']['main']['App']['GetFileAtCommitBase64'](arg1, arg2, arg3);
+}
+
 export function GetFileBase64(arg1, arg2) {
   return window['go']['main']['App']['GetFileBase64'](arg1, arg2);
 }

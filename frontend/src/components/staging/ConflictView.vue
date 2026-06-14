@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useToastStore } from '../../stores/toast'
-import { GetConflictContent, ResolveConflict } from '../../../wailsjs/go/main/App'
+import { ref, computed, onMounted } from 'vue';
+import { useToastStore } from '../../stores/toast';
+import { GetConflictContent, ResolveConflict } from '../../../wailsjs/go/main/App';
 
 const props = defineProps<{
   repoPath: string
   path: string
-}>()
+}>();
 
 const emit = defineEmits<{
   resolved: []
-}>()
+}>();
 
-const toast = useToastStore()
-const loading = ref(true)
-const saving = ref(false)
+const toast = useToastStore();
+const loading = ref(true);
+const saving = ref(false);
 
 type SelectedLine = { side: 'ours' | 'theirs'; index: number }
 
@@ -31,172 +31,167 @@ type ConflictChunk = {
 }
 type Chunk = ContextChunk | ConflictChunk
 
-const chunks = ref<Chunk[]>([])
+const chunks = ref<Chunk[]>([]);
 
 const unresolvedCount = computed(() =>
   chunks.value.filter(c => {
-    if (c.type !== 'conflict') return false
-    const cc = c as ConflictChunk
-    return cc.selection.length === 0 && cc.textOverride === null
+    if (c.type !== 'conflict') {return false;}
+    const cc = c as ConflictChunk;
+    return cc.selection.length === 0 && cc.textOverride === null;
   }).length
-)
+);
 
 onMounted(async () => {
   try {
-    const content = await GetConflictContent(props.repoPath, props.path)
-    chunks.value = parseConflicts(content.working)
+    const content = await GetConflictContent(props.repoPath, props.path);
+    chunks.value = parseConflicts(content.working);
   } catch (e) {
-    toast.error(String(e))
+    toast.error(String(e));
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-})
+});
 
 function parseConflicts(text: string): Chunk[] {
-  const result: Chunk[] = []
-  const lines = text.split('\n')
+  const result: Chunk[] = [];
+  const lines = text.split('\n');
 
-  let state: 'context' | 'ours' | 'theirs' = 'context'
-  let contextLines: string[] = []
-  let oursLines: string[] = []
-  let theirsLines: string[] = []
-  let oursLabel = 'HEAD'
-  let theirsLabel = 'theirs'
+  let state: 'context' | 'ours' | 'theirs' = 'context';
+  let contextLines: string[] = [];
+  let oursLines: string[] = [];
+  let theirsLines: string[] = [];
+  let oursLabel = 'HEAD';
 
   for (const line of lines) {
     if (line.startsWith('<<<<<<< ')) {
-      if (contextLines.length) result.push({ type: 'context', lines: [...contextLines] })
-      contextLines = []
-      oursLabel = line.slice(8)
-      oursLines = []
-      state = 'ours'
+      if (contextLines.length) {result.push({ type: 'context', lines: [...contextLines] });}
+      contextLines = [];
+      oursLabel = line.slice(8);
+      oursLines = [];
+      state = 'ours';
     } else if (line === '=======' && state === 'ours') {
-      state = 'theirs'
-      theirsLines = []
+      state = 'theirs';
+      theirsLines = [];
     } else if (line.startsWith('>>>>>>> ') && state === 'theirs') {
-      theirsLabel = line.slice(8)
-      result.push({ type: 'conflict', ours: [...oursLines], theirs: [...theirsLines], oursLabel, theirsLabel, accepted: null, selection: [], textOverride: null })
-      oursLines = []
-      theirsLines = []
-      state = 'context'
+      const theirsLabel = line.slice(8);
+      result.push({ type: 'conflict', ours: [...oursLines], theirs: [...theirsLines], oursLabel, theirsLabel, accepted: null, selection: [], textOverride: null });
+      oursLines = [];
+      theirsLines = [];
+      state = 'context';
     } else {
-      if (state === 'context') contextLines.push(line)
-      else if (state === 'ours') oursLines.push(line)
-      else theirsLines.push(line)
+      if (state === 'context') {contextLines.push(line);}
+      else if (state === 'ours') {oursLines.push(line);}
+      else {theirsLines.push(line);}
     }
   }
 
-  while (contextLines.length && contextLines[contextLines.length - 1] === '') contextLines.pop()
-  if (contextLines.length) result.push({ type: 'context', lines: contextLines })
+  while (contextLines.length && contextLines[contextLines.length - 1] === '') {contextLines.pop();}
+  if (contextLines.length) {result.push({ type: 'context', lines: contextLines });}
 
-  return result
+  return result;
 }
 
-function asConflict(c: Chunk): ConflictChunk { return c as ConflictChunk }
+function asConflict(c: Chunk): ConflictChunk { return c as ConflictChunk; }
 
 // ── Selection helpers ────────────────────────────────────────────────────────
 
 function selectionIndex(chunk: ConflictChunk, side: 'ours' | 'theirs', lineIdx: number): number {
-  return chunk.selection.findIndex(s => s.side === side && s.index === lineIdx)
+  return chunk.selection.findIndex(s => s.side === side && s.index === lineIdx);
 }
 
 function isLineSelected(chunk: ConflictChunk, side: 'ours' | 'theirs', lineIdx: number): boolean {
-  return selectionIndex(chunk, side, lineIdx) !== -1
+  return selectionIndex(chunk, side, lineIdx) !== -1;
 }
 
 function selectionOrder(chunk: ConflictChunk, side: 'ours' | 'theirs', lineIdx: number): number {
-  const i = selectionIndex(chunk, side, lineIdx)
-  return i === -1 ? -1 : i + 1
+  const i = selectionIndex(chunk, side, lineIdx);
+  return i === -1 ? -1 : i + 1;
 }
 
 function toggleLine(chunk: ConflictChunk, side: 'ours' | 'theirs', lineIdx: number) {
-  const idx = selectionIndex(chunk, side, lineIdx)
+  const idx = selectionIndex(chunk, side, lineIdx);
   if (idx === -1) {
-    chunk.selection.push({ side, index: lineIdx })
+    chunk.selection.push({ side, index: lineIdx });
   } else {
-    chunk.selection.splice(idx, 1)
+    chunk.selection.splice(idx, 1);
   }
-  chunk.textOverride = null
-  chunk.accepted = deriveAccepted(chunk)
+  chunk.textOverride = null;
+  chunk.accepted = deriveAccepted(chunk);
 }
 
 function deriveAccepted(chunk: ConflictChunk): 'ours' | 'theirs' | 'custom' | null {
-  if (chunk.selection.length === 0) return null
+  if (chunk.selection.length === 0) {return null;}
   const allOurs = chunk.selection.length === chunk.ours.length &&
-    chunk.selection.every((s, i) => s.side === 'ours' && s.index === i)
-  if (allOurs) return 'ours'
+    chunk.selection.every((s, i) => s.side === 'ours' && s.index === i);
+  if (allOurs) {return 'ours';}
   const allTheirs = chunk.selection.length === chunk.theirs.length &&
-    chunk.selection.every((s, i) => s.side === 'theirs' && s.index === i)
-  if (allTheirs) return 'theirs'
-  return 'custom'
+    chunk.selection.every((s, i) => s.side === 'theirs' && s.index === i);
+  if (allTheirs) {return 'theirs';}
+  return 'custom';
 }
 
 function acceptSide(chunk: ConflictChunk, side: 'ours' | 'theirs') {
-  const lines = side === 'ours' ? chunk.ours : chunk.theirs
+  const lines = side === 'ours' ? chunk.ours : chunk.theirs;
   if (chunk.accepted === side && chunk.textOverride === null) {
-    chunk.selection = []
-    chunk.accepted = null
+    chunk.selection = [];
+    chunk.accepted = null;
   } else {
-    chunk.selection = lines.map((_, i) => ({ side, index: i }))
-    chunk.accepted = side
+    chunk.selection = lines.map((_, i) => ({ side, index: i }));
+    chunk.accepted = side;
   }
-  chunk.textOverride = null
+  chunk.textOverride = null;
 }
 
 function acceptAll(side: 'ours' | 'theirs') {
   for (const chunk of chunks.value) {
-    if (chunk.type === 'conflict') acceptSide(asConflict(chunk), side)
+    if (chunk.type === 'conflict') {acceptSide(asConflict(chunk), side);}
   }
 }
 
 // ── Preview / manual edit ────────────────────────────────────────────────────
 
 function previewText(chunk: ConflictChunk): string {
-  return chunk.selection.map(s => (s.side === 'ours' ? chunk.ours : chunk.theirs)[s.index]).join('\n')
-}
-
-function previewLines(chunk: ConflictChunk): string[] {
-  return chunk.selection.map(s => (s.side === 'ours' ? chunk.ours : chunk.theirs)[s.index])
+  return chunk.selection.map(s => (s.side === 'ours' ? chunk.ours : chunk.theirs)[s.index]).join('\n');
 }
 
 function resolvedText(chunk: ConflictChunk): string {
-  return chunk.textOverride ?? previewText(chunk)
+  return chunk.textOverride ?? previewText(chunk);
 }
 
 function onPreviewInput(chunk: ConflictChunk, e: Event) {
-  chunk.textOverride = (e.target as HTMLTextAreaElement).value
+  chunk.textOverride = (e.target as HTMLTextAreaElement).value;
 }
 
 function resetOverride(chunk: ConflictChunk) {
-  chunk.textOverride = null
+  chunk.textOverride = null;
 }
 
 // ── Build resolved content ───────────────────────────────────────────────────
 
 function buildResolved(): string {
-  const parts: string[] = []
+  const parts: string[] = [];
   for (const chunk of chunks.value) {
     if (chunk.type === 'context') {
-      parts.push(chunk.lines.join('\n'))
+      parts.push(chunk.lines.join('\n'));
     } else {
-      const c = chunk as ConflictChunk
-      parts.push(resolvedText(c))
+      const c = chunk as ConflictChunk;
+      parts.push(resolvedText(c));
     }
   }
-  return parts.join('\n') + '\n'
+  return parts.join('\n') + '\n';
 }
 
 async function saveAndStage() {
-  if (unresolvedCount.value > 0 || saving.value) return
-  saving.value = true
+  if (unresolvedCount.value > 0 || saving.value) {return;}
+  saving.value = true;
   try {
-    await ResolveConflict(props.repoPath, props.path, buildResolved())
-    toast.success(`Resolved ${props.path.split('/').pop()}`)
-    emit('resolved')
+    await ResolveConflict(props.repoPath, props.path, buildResolved());
+    toast.success(`Resolved ${props.path.split('/').pop()}`);
+    emit('resolved');
   } catch (e) {
-    toast.error(String(e))
+    toast.error(String(e));
   } finally {
-    saving.value = false
+    saving.value = false;
   }
 }
 </script>
@@ -240,8 +235,8 @@ async function saveAndStage() {
               :key="'o' + li"
               class="cv-line"
               :class="{ 'cv-line--selected': isLineSelected(asConflict(chunk), 'ours', li) }"
-              @click="toggleLine(asConflict(chunk), 'ours', li)"
               :title="isLineSelected(asConflict(chunk), 'ours', li) ? 'Click to deselect' : 'Click to include this line'"
+              @click="toggleLine(asConflict(chunk), 'ours', li)"
             >
               <span class="cv-line-badge">
                 <span v-if="selectionOrder(asConflict(chunk), 'ours', li) > 0" class="cv-badge-num ours">{{ selectionOrder(asConflict(chunk), 'ours', li) }}</span>
@@ -269,8 +264,8 @@ async function saveAndStage() {
               :key="'t' + li"
               class="cv-line"
               :class="{ 'cv-line--selected': isLineSelected(asConflict(chunk), 'theirs', li) }"
-              @click="toggleLine(asConflict(chunk), 'theirs', li)"
               :title="isLineSelected(asConflict(chunk), 'theirs', li) ? 'Click to deselect' : 'Click to include this line'"
+              @click="toggleLine(asConflict(chunk), 'theirs', li)"
             >
               <span class="cv-line-badge">
                 <span v-if="selectionOrder(asConflict(chunk), 'theirs', li) > 0" class="cv-badge-num theirs">{{ selectionOrder(asConflict(chunk), 'theirs', li) }}</span>
@@ -292,8 +287,8 @@ async function saveAndStage() {
                 <button
                   v-if="asConflict(chunk).textOverride !== null"
                   class="cv-clear-btn"
-                  @click="resetOverride(asConflict(chunk))"
                   title="Reset to selection"
+                  @click="resetOverride(asConflict(chunk))"
                 >Reset</button>
                 <button
                   class="cv-clear-btn"
@@ -304,8 +299,8 @@ async function saveAndStage() {
             <textarea
               class="cv-preview-editor"
               :value="resolvedText(asConflict(chunk))"
-              @input="onPreviewInput(asConflict(chunk), $event)"
               spellcheck="false"
+              @input="onPreviewInput(asConflict(chunk), $event)"
             />
           </template>
 

@@ -245,6 +245,16 @@ func (a *App) GetFileBase64(repoPath, filePath string) (string, error) {
 	return base64.StdEncoding.EncodeToString(data), nil
 }
 
+func (a *App) GetFileAtCommitBase64(repoPath, hash, filePath string) (string, error) {
+	cmd := exec.Command("git", "show", hash+":"+filePath)
+	cmd.Dir = repoPath
+	data, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(data), nil
+}
+
 func (a *App) OpenInDefaultApp(repoPath, filePath string) error {
 	return gitcli.OpenInDefaultApp(repoPath, filePath)
 }

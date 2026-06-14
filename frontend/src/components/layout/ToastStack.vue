@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useToastStore } from '../../stores/toast'
+import { useToastStore } from '../../stores/toast';
 
-const toast = useToastStore()
+const toast = useToastStore();
 </script>
 
 <template>

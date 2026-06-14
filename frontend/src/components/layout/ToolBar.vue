@@ -1,123 +1,114 @@
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
-import { useReposStore } from '../../stores/repos'
-import { useCommitsStore } from '../../stores/commits'
-import { useStagingStore } from '../../stores/staging'
-import { useBranchesStore } from '../../stores/branches'
-import { useToastStore } from '../../stores/toast'
+import { ref, computed, nextTick } from 'vue';
+import { useReposStore } from '../../stores/repos';
+import { useCommitsStore } from '../../stores/commits';
+import { useStagingStore } from '../../stores/staging';
+import { useBranchesStore } from '../../stores/branches';
+import { useToastStore } from '../../stores/toast';
 import {
   PushBranch,
   Stash,
   StashPop,
   CreateBranch,
   OpenTerminal,
-} from '../../../wailsjs/go/main/App'
+} from '../../../wailsjs/go/main/App';
 
-const repos = useReposStore()
-const commits = useCommitsStore()
-const staging = useStagingStore()
-const branches = useBranchesStore()
-const toast = useToastStore()
+const repos = useReposStore();
+const commits = useCommitsStore();
+const staging = useStagingStore();
+const branches = useBranchesStore();
+const toast = useToastStore();
 
-const repoPath = computed(() => repos.activeRepo?.path ?? '')
-const disabled = computed(() => !repos.activeRepo)
+const repoPath = computed(() => repos.activeRepo?.path ?? '');
+const disabled = computed(() => !repos.activeRepo);
 
-const busy = ref<string | null>(null)
+const busy = ref<string | null>(null);
 
 async function run(op: string, fn: () => Promise<void>, successMsg?: string) {
-  if (busy.value) return
-  busy.value = op
+  if (busy.value) {return;}
+  busy.value = op;
   try {
-    await fn()
-    if (successMsg) toast.success(successMsg)
+    await fn();
+    if (successMsg) {toast.success(successMsg);}
   } catch (e: unknown) {
-    toast.error(String(e))
+    toast.error(String(e));
   } finally {
-    busy.value = null
+    busy.value = null;
   }
 }
 
 async function onFetch() {
   await run('fetch', async () => {
-    await staging.fetchAll(repoPath.value)
-    await commits.load(repoPath.value)
-    branches.load(repoPath.value)
-  }, 'Fetched successfully')
+    await staging.fetchAll(repoPath.value);
+    await commits.load(repoPath.value);
+    branches.load(repoPath.value);
+  }, 'Fetched successfully');
 }
 
 async function onPull() {
   await run('pull', async () => {
-    await staging.pullBranch(repoPath.value)
-    await commits.load(repoPath.value)
-    staging.load(repoPath.value)
-    branches.load(repoPath.value)
-  }, 'Pulled successfully')
+    await staging.pullBranch(repoPath.value);
+    await commits.load(repoPath.value);
+    staging.load(repoPath.value);
+    branches.load(repoPath.value);
+  }, 'Pulled successfully');
 }
 
 async function onPush() {
   await run('push', async () => {
-    await PushBranch(repoPath.value)
-    branches.load(repoPath.value)
-  }, 'Pushed successfully')
+    await PushBranch(repoPath.value);
+    branches.load(repoPath.value);
+  }, 'Pushed successfully');
 }
 
 async function onStash() {
   await run('stash', async () => {
-    await Stash(repoPath.value)
-    await staging.load(repoPath.value)
-  }, 'Changes stashed')
+    await Stash(repoPath.value);
+    await staging.load(repoPath.value);
+  }, 'Changes stashed');
 }
 
 async function onPop() {
   await run('pop', async () => {
-    await StashPop(repoPath.value)
-    await staging.load(repoPath.value)
-  }, 'Stash applied')
+    await StashPop(repoPath.value);
+    await staging.load(repoPath.value);
+  }, 'Stash applied');
 }
 
 async function onTerminal() {
-  await run('terminal', () => OpenTerminal(repoPath.value))
+  await run('terminal', () => OpenTerminal(repoPath.value));
 }
 
 // Branch creation popover
-const showBranchInput = ref(false)
-const branchName = ref('')
-const branchInputEl = ref<HTMLInputElement | null>(null)
+const showBranchInput = ref(false);
+const branchName = ref('');
+const branchInputEl = ref<HTMLInputElement | null>(null);
 
 async function openBranchInput() {
-  if (disabled.value) return
-  showBranchInput.value = true
-  await nextTick()
-  branchInputEl.value?.focus()
+  if (disabled.value) {return;}
+  showBranchInput.value = true;
+  await nextTick();
+  branchInputEl.value?.focus();
 }
 
 function cancelBranch() {
-  showBranchInput.value = false
-  branchName.value = ''
+  showBranchInput.value = false;
+  branchName.value = '';
 }
 
 async function confirmBranch() {
-  const name = branchName.value.trim()
-  if (!name) return
-  const captured = name
+  const name = branchName.value.trim();
+  if (!name) {return;}
+  const captured = name;
   await run('branch', async () => {
-    await CreateBranch(repoPath.value, captured)
-    branches.load(repoPath.value)
-    commits.load(repoPath.value)
-  }, `Branch '${name}' created`)
-  showBranchInput.value = false
-  branchName.value = ''
+    await CreateBranch(repoPath.value, captured);
+    branches.load(repoPath.value);
+    commits.load(repoPath.value);
+  }, `Branch '${name}' created`);
+  showBranchInput.value = false;
+  branchName.value = '';
 }
 
-const icons = {
-  fetch:    `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="3" x2="14" y2="3"/><line x1="9" y1="5" x2="9" y2="13"/><polyline points="5,10 9,14 13,10"/></svg>`,
-  pull:     `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="3" x2="9" y2="13"/><polyline points="5,9 9,14 13,9"/></svg>`,
-  push:     `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="15" x2="9" y2="5"/><polyline points="5,9 9,4 13,9"/></svg>`,
-  branch:   `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="4" r="1.8"/><circle cx="5" cy="14" r="1.8"/><circle cx="13" cy="4" r="1.8"/><line x1="5" y1="6" x2="5" y2="12"/><path d="M13 6 C13 10 5 10 5 12"/></svg>`,
-  stash:    `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="12" height="4" rx="1.5"/><line x1="9" y1="3" x2="9" y2="10"/><polyline points="6,7 9,10 12,7"/></svg>`,
-  pop:      `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="12" height="4" rx="1.5"/><line x1="9" y1="9" x2="9" y2="2"/><polyline points="6,5 9,2 12,5"/></svg>`,
-  terminal: `<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3,6 8,9 3,12"/><line x1="10" y1="12" x2="15" y2="12"/></svg>`,
-}
 </script>
 
 <template>
@@ -126,15 +117,27 @@ const icons = {
       <!-- Remote ops group -->
       <div class="btn-group">
         <button class="tbtn" :disabled="disabled" :class="{ loading: busy === 'fetch' }" @click="onFetch">
-          <span class="tbtn-icon" v-html="icons.fetch" />
+          <span class="tbtn-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="4" y1="3" x2="14" y2="3" /><line x1="9" y1="5" x2="9" y2="13" /><polyline points="5,10 9,14 13,10" />
+            </svg>
+          </span>
           <span class="tbtn-label">Fetch</span>
         </button>
         <button class="tbtn" :disabled="disabled" :class="{ loading: busy === 'pull' }" @click="onPull">
-          <span class="tbtn-icon" v-html="icons.pull" />
+          <span class="tbtn-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="9" y1="3" x2="9" y2="13" /><polyline points="5,9 9,14 13,9" />
+            </svg>
+          </span>
           <span class="tbtn-label">Pull</span>
         </button>
         <button class="tbtn" :disabled="disabled" :class="{ loading: busy === 'push' }" @click="onPush">
-          <span class="tbtn-icon" v-html="icons.push" />
+          <span class="tbtn-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="9" y1="15" x2="9" y2="5" /><polyline points="5,9 9,4 13,9" />
+            </svg>
+          </span>
           <span class="tbtn-label">Push</span>
         </button>
       </div>
@@ -149,7 +152,12 @@ const icons = {
           :class="{ loading: busy === 'branch', active: showBranchInput }"
           @click="openBranchInput"
         >
-          <span class="tbtn-icon" v-html="icons.branch" />
+          <span class="tbtn-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <circle cx="5" cy="4" r="1.8" /><circle cx="5" cy="14" r="1.8" /><circle cx="13" cy="4" r="1.8" />
+              <line x1="5" y1="6" x2="5" y2="12" /><path d="M13 6 C13 10 5 10 5 12" />
+            </svg>
+          </span>
           <span class="tbtn-label">Branch</span>
         </button>
 
@@ -173,11 +181,19 @@ const icons = {
       <!-- Stash group -->
       <div class="btn-group">
         <button class="tbtn" :disabled="disabled" :class="{ loading: busy === 'stash' }" @click="onStash">
-          <span class="tbtn-icon" v-html="icons.stash" />
+          <span class="tbtn-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="12" height="4" rx="1.5" /><line x1="9" y1="3" x2="9" y2="10" /><polyline points="6,7 9,10 12,7" />
+            </svg>
+          </span>
           <span class="tbtn-label">Stash</span>
         </button>
         <button class="tbtn" :disabled="disabled" :class="{ loading: busy === 'pop' }" @click="onPop">
-          <span class="tbtn-icon" v-html="icons.pop" />
+          <span class="tbtn-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="12" height="4" rx="1.5" /><line x1="9" y1="9" x2="9" y2="2" /><polyline points="6,5 9,2 12,5" />
+            </svg>
+          </span>
           <span class="tbtn-label">Pop</span>
         </button>
       </div>
@@ -187,7 +203,11 @@ const icons = {
       <!-- Terminal -->
       <div class="btn-group">
         <button class="tbtn" :disabled="disabled" @click="onTerminal">
-          <span class="tbtn-icon" v-html="icons.terminal" />
+          <span class="tbtn-icon">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3,6 8,9 3,12" /><line x1="10" y1="12" x2="15" y2="12" />
+            </svg>
+          </span>
           <span class="tbtn-label">Terminal</span>
         </button>
       </div>

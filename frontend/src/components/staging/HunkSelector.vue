@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { FileDiff, Hunk } from '../../stores/staging'
+import { computed } from 'vue';
+import type { FileDiff, Hunk } from '../../stores/staging';
 
 const props = defineProps<{
   diffs: FileDiff[]
   mode: 'stage' | 'unstage'
   path: string
   diffLoading: boolean
-}>()
+}>();
 
 const emit = defineEmits<{
   'stage-file': []
@@ -15,20 +15,20 @@ const emit = defineEmits<{
   'discard-file': []
   'stage-hunk': [hunk: Hunk]
   'unstage-hunk': [hunk: Hunk]
-}>()
+}>();
 
 // Flatten hunks across all FileDiffs (usually just one for a single file)
 const flatHunks = computed(() => {
-  const result: Hunk[] = []
+  const result: Hunk[] = [];
   for (const fd of props.diffs) {
     for (const h of fd.hunks) {
-      result.push(h)
+      result.push(h);
     }
   }
-  return result
-})
+  return result;
+});
 
-const isBinary = computed(() => props.diffs.some(d => d.isBinary))
+const isBinary = computed(() => props.diffs.some(d => d.isBinary));
 </script>
 
 <template>

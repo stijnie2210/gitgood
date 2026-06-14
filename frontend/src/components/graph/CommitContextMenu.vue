@@ -1,136 +1,136 @@
 <script setup lang="ts">
-import { ref, nextTick, onMounted, onUnmounted } from 'vue'
-import { clampMenuPosition } from '../../composables/useContextMenu'
-import type { GraphRow } from '../../stores/commits'
-import { useToastStore } from '../../stores/toast'
+import { ref, nextTick, onMounted, onUnmounted } from 'vue';
+import { clampMenuPosition } from '../../composables/useContextMenu';
+import type { GraphRow } from '../../stores/commits';
+import { useToastStore } from '../../stores/toast';
 import {
   CheckoutRef,
   CreateBranchAt,
   RevertCommit,
   CreateTag,
   ResetBranch,
-} from '../../../wailsjs/go/main/App'
+} from '../../../wailsjs/go/main/App';
 
 const props = defineProps<{
   row: GraphRow
   repoPath: string
   x: number
   y: number
-}>()
+}>();
 
 const emit = defineEmits<{
   close: []
   refresh: []
-}>()
+}>();
 
-const toast = useToastStore()
+const toast = useToastStore();
 
 type Mode = 'menu' | 'branch' | 'tag' | 'revert-confirm'
-const mode = ref<Mode>('menu')
-const inputVal = ref('')
-const inputEl = ref<HTMLInputElement | null>(null)
-const menuEl = ref<HTMLElement | null>(null)
+const mode = ref<Mode>('menu');
+const inputVal = ref('');
+const inputEl = ref<HTMLInputElement | null>(null);
+const menuEl = ref<HTMLElement | null>(null);
 
-const style = ref({ top: '0px', left: '0px' })
+const style = ref({ top: '0px', left: '0px' });
 
 onMounted(() => {
-  const el = menuEl.value
-  if (!el) return
-  const { x, y } = clampMenuPosition(el, props.x, props.y)
-  style.value = { top: `${y}px`, left: `${x}px` }
+  const el = menuEl.value;
+  if (!el) {return;}
+  const { x, y } = clampMenuPosition(el, props.x, props.y);
+  style.value = { top: `${y}px`, left: `${x}px` };
 
-  document.addEventListener('mousedown', onOutside, true)
-  document.addEventListener('keydown', onKey, true)
-})
+  document.addEventListener('mousedown', onOutside, true);
+  document.addEventListener('keydown', onKey, true);
+});
 
 onUnmounted(() => {
-  document.removeEventListener('mousedown', onOutside, true)
-  document.removeEventListener('keydown', onKey, true)
-})
+  document.removeEventListener('mousedown', onOutside, true);
+  document.removeEventListener('keydown', onKey, true);
+});
 
 function onOutside(e: MouseEvent) {
   if (menuEl.value && !menuEl.value.contains(e.target as Node)) {
-    emit('close')
+    emit('close');
   }
 }
 
 function onKey(e: KeyboardEvent) {
-  if (e.key === 'Escape') emit('close')
+  if (e.key === 'Escape') {emit('close');}
 }
 
 // ── Actions ──────────────────────────────────────────────────────────────────
 
 async function copyHash(full: boolean) {
-  await navigator.clipboard.writeText(full ? props.row.hash : props.row.shortHash)
-  toast.success(full ? 'Copied full SHA' : 'Copied short SHA')
-  emit('close')
+  await navigator.clipboard.writeText(full ? props.row.hash : props.row.shortHash);
+  toast.success(full ? 'Copied full SHA' : 'Copied short SHA');
+  emit('close');
 }
 
 async function checkout() {
   try {
-    await CheckoutRef(props.repoPath, props.row.hash)
-    toast.success(`Checked out ${props.row.shortHash} (detached HEAD)`)
-    emit('refresh')
-  } catch (e) { toast.error(String(e)) }
-  emit('close')
+    await CheckoutRef(props.repoPath, props.row.hash);
+    toast.success(`Checked out ${props.row.shortHash} (detached HEAD)`);
+    emit('refresh');
+  } catch (e) { toast.error(String(e)); }
+  emit('close');
 }
 
 function openBranchInput() {
-  mode.value = 'branch'
-  inputVal.value = ''
-  nextTick(() => inputEl.value?.focus())
+  mode.value = 'branch';
+  inputVal.value = '';
+  nextTick(() => inputEl.value?.focus());
 }
 
 async function confirmBranch() {
-  const name = inputVal.value.trim()
-  if (!name) return
+  const name = inputVal.value.trim();
+  if (!name) {return;}
   try {
-    await CreateBranchAt(props.repoPath, name, props.row.hash)
-    toast.success(`Branch '${name}' created at ${props.row.shortHash}`)
-    emit('refresh')
-  } catch (e) { toast.error(String(e)) }
-  emit('close')
+    await CreateBranchAt(props.repoPath, name, props.row.hash);
+    toast.success(`Branch '${name}' created at ${props.row.shortHash}`);
+    emit('refresh');
+  } catch (e) { toast.error(String(e)); }
+  emit('close');
 }
 
 function openRevertConfirm() {
-  mode.value = 'revert-confirm'
+  mode.value = 'revert-confirm';
 }
 
 async function revert(commitImmediately: boolean) {
   try {
-    await RevertCommit(props.repoPath, props.row.hash, commitImmediately)
+    await RevertCommit(props.repoPath, props.row.hash, commitImmediately);
     toast.success(commitImmediately
       ? `Reverted ${props.row.shortHash} (new commit created)`
-      : `Reverted ${props.row.shortHash} — changes staged, ready to commit`)
-    emit('refresh')
-  } catch (e) { toast.error(String(e)) }
-  emit('close')
+      : `Reverted ${props.row.shortHash} — changes staged, ready to commit`);
+    emit('refresh');
+  } catch (e) { toast.error(String(e)); }
+  emit('close');
 }
 
 async function reset(resetMode: 'soft' | 'mixed' | 'hard') {
   try {
-    await ResetBranch(props.repoPath, props.row.hash, resetMode)
-    toast.success(`Branch reset (${resetMode}) to ${props.row.shortHash}`)
-    emit('refresh')
-  } catch (e) { toast.error(String(e)) }
-  emit('close')
+    await ResetBranch(props.repoPath, props.row.hash, resetMode);
+    toast.success(`Branch reset (${resetMode}) to ${props.row.shortHash}`);
+    emit('refresh');
+  } catch (e) { toast.error(String(e)); }
+  emit('close');
 }
 
 function openTagInput() {
-  mode.value = 'tag'
-  inputVal.value = ''
-  nextTick(() => inputEl.value?.focus())
+  mode.value = 'tag';
+  inputVal.value = '';
+  nextTick(() => inputEl.value?.focus());
 }
 
 async function confirmTag() {
-  const name = inputVal.value.trim()
-  if (!name) return
+  const name = inputVal.value.trim();
+  if (!name) {return;}
   try {
-    await CreateTag(props.repoPath, name, props.row.hash)
-    toast.success(`Tag '${name}' created at ${props.row.shortHash}`)
-    emit('refresh')
-  } catch (e) { toast.error(String(e)) }
-  emit('close')
+    await CreateTag(props.repoPath, name, props.row.hash);
+    toast.success(`Tag '${name}' created at ${props.row.shortHash}`);
+    emit('refresh');
+  } catch (e) { toast.error(String(e)); }
+  emit('close');
 }
 </script>
 
@@ -143,7 +143,7 @@ async function confirmTag() {
       <div class="ctx-confirm-question">Commit the reverted changes immediately?</div>
       <div class="ctx-confirm-row">
         <button class="ctx-confirm-btn ctx-confirm-btn--yes" @click="revert(true)">Yes</button>
-        <button class="ctx-confirm-btn ctx-confirm-btn--no"  @click="revert(false)">No</button>
+        <button class="ctx-confirm-btn ctx-confirm-btn--no" @click="revert(false)">No</button>
         <button class="ctx-confirm-btn ctx-confirm-btn--cancel" @click="emit('close')">Cancel</button>
       </div>
     </template>
