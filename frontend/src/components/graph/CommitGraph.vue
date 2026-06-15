@@ -3,6 +3,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import { useVirtualizer } from '@tanstack/vue-virtual';
 import { useCommitsStore } from '../../stores/commits';
 import { useReposStore } from '../../stores/repos';
+import { useToastStore } from '../../stores/toast';
 import { CELL_W } from './graphRenderer';
 import CommitRow from './CommitRow.vue';
 import CommitContextMenu from './CommitContextMenu.vue';
@@ -11,6 +12,7 @@ const ROW_H = 28;
 
 const repos = useReposStore();
 const commits = useCommitsStore();
+const toast = useToastStore();
 
 const parentRef = ref<HTMLElement | null>(null);
 const searchQuery = ref('');
@@ -78,6 +80,17 @@ function onGlobalKeyDown(e: KeyboardEvent) {
   if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
     e.preventDefault();
     openSearch();
+    return;
+  }
+
+  if (e.key === 'y' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      return;
+    }
+    if (commits.selectedHash) {
+      navigator.clipboard.writeText(commits.selectedHash);
+      toast.success('Hash copied');
+    }
     return;
   }
 

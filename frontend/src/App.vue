@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch, type Ref } from 'vue';
+import { onMounted, onUnmounted, ref, watch, type Ref, computed } from 'vue';
 import { useDetailWidth } from './composables/useDetailWidth';
 import TabBar from './components/layout/TabBar.vue';
 import ToolBar from './components/layout/ToolBar.vue';
@@ -101,6 +101,54 @@ const detailWidth = useDetailWidth();
 
 const startSidebarResize = makeResizer(sidebarWidth, 140, 500, 'right');
 const startDetailResize = makeResizer(detailWidth, 200, 800, 'left');
+
+const repoPath = computed(() => repos.activeRepo?.path ?? '');
+
+function onGlobalKeyDown(e: KeyboardEvent) {
+  if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+    return;
+  }
+  if (!e.metaKey && !e.ctrlKey) {
+    return;
+  }
+  if (e.key === '1') {
+    e.preventDefault();
+    if (repos.activeRepo) {
+      viewMode.value = 'commits';
+    }
+  } else if (e.key === '2') {
+    e.preventDefault();
+    if (repos.activeRepo) {
+      viewMode.value = 'staging';
+    }
+  } else if (e.key === '[') {
+    e.preventDefault();
+    if (repos.tabs.length > 1) {
+      repos.setActive((repos.activeIndex - 1 + repos.tabs.length) % repos.tabs.length);
+    }
+  } else if (e.key === ']') {
+    e.preventDefault();
+    if (repos.tabs.length > 1) {
+      repos.setActive((repos.activeIndex + 1) % repos.tabs.length);
+    }
+  } else if (e.key === 'r') {
+    e.preventDefault();
+    const path = repoPath.value;
+    if (path) {
+      staging.fetchAll(path).then(() => {
+        commits.load(path);
+        staging.load(path);
+        branches.load(path);
+      });
+    }
+  } else if (e.key === 'o') {
+    e.preventDefault();
+    repos.pickAndOpen();
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', onGlobalKeyDown));
+onUnmounted(() => window.removeEventListener('keydown', onGlobalKeyDown));
 </script>
 
 <template>

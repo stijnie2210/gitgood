@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import type { Ref } from 'vue';
+import { isImageFile, imageDataUrl } from '../../utils/imageUtils';
 import { useReposStore } from '../../stores/repos';
 import { useBranchesStore } from '../../stores/branches';
 import { useCommitsStore } from '../../stores/commits';
@@ -54,18 +55,6 @@ function makeResizer(width: Ref<number>, min: number, max: number) {
 
 const startResize = makeResizer(fileListWidth, 180, 520);
 
-watch(
-  () => repos.activeRepo?.path,
-  (path) => {
-    if (path) {
-      staging.load(path);
-    } else {
-      staging.clear();
-    }
-  },
-  { immediate: true }
-);
-
 function shortPath(p: string) {
   const parts = p.split('/');
   if (parts.length > 2) {
@@ -92,8 +81,7 @@ async function onStageFile(path: string) {
   } else if (staging.stagedFiles.length) {
     onSelectFile(staging.stagedFiles[0].path, 'staged');
   } else {
-    staging.selectedPath = null;
-    staging.diff = [];
+    staging.clearSelection();
   }
 }
 
@@ -110,8 +98,7 @@ async function onUnstageFile(path: string) {
   } else if (staging.unstagedFiles.length) {
     onSelectFile(staging.unstagedFiles[0].path, 'unstaged');
   } else {
-    staging.selectedPath = null;
-    staging.diff = [];
+    staging.clearSelection();
   }
 }
 
@@ -229,9 +216,7 @@ const selectedIsConflict = computed(() => {
 });
 
 function onSelectConflict(path: string) {
-  staging.selectedPath = path;
-  staging.selectedMode = 'unstaged';
-  staging.diff = [];
+  staging.setSelectedConflict(path);
 }
 
 // ── File context menu ─────────────────────────────────────────────────────────
@@ -247,13 +232,14 @@ interface FileCtxMenu {
 }
 
 const fileCtxMenu = ref<FileCtxMenu | null>(null);
+const fileCtxMenuEl = ref<HTMLElement | null>(null);
 
 async function openFileCtxMenu(e: MouseEvent, path: string, section: FileCtxMenu['section']) {
   e.preventDefault();
   e.stopPropagation();
   fileCtxMenu.value = { x: e.clientX, y: e.clientY, path, section, mode: 'default' };
   await nextTick();
-  const menu = document.getElementById('file-ctx-menu');
+  const menu = fileCtxMenuEl.value;
   if (menu && fileCtxMenu.value) {
     const { x, y } = clampMenuPosition(menu, e.clientX, e.clientY);
     fileCtxMenu.value = { ...fileCtxMenu.value, x, y };
@@ -265,8 +251,7 @@ function closeFileCtxMenu() {
 }
 
 function onFileCtxMouseDown(e: MouseEvent) {
-  const menu = document.getElementById('file-ctx-menu');
-  if (menu && !menu.contains(e.target as Node)) {
+  if (fileCtxMenuEl.value && !fileCtxMenuEl.value.contains(e.target as Node)) {
     closeFileCtxMenu();
   }
 }
@@ -429,7 +414,7 @@ async function ctxDeleteFile() {
     await DeleteWorkingFile(repoPath(), path);
     await staging.load(repoPath());
     if (staging.selectedPath === path) {
-      staging.selectedPath = null;
+      staging.clearSelection();
     }
     toast.success(`Deleted ${path}`);
   } catch (e) {
@@ -497,6 +482,20 @@ function onKeyDown(e: KeyboardEvent) {
   } else if (e.key === 'ArrowDown') {
     e.preventDefault();
     navigateTo(1);
+  } else if (e.key === ' ' && !e.metaKey && !e.ctrlKey) {
+    if (e.target instanceof HTMLButtonElement) {
+      return;
+    }
+    const entry = navigableFiles.value[currentNavIndex.value];
+    if (!entry || entry.section === 'conflict') {
+      return;
+    }
+    e.preventDefault();
+    if (entry.section === 'unstaged') {
+      onStageFile(entry.path);
+    } else {
+      onUnstageFile(entry.path);
+    }
   }
 }
 
@@ -504,35 +503,6 @@ onMounted(() => document.addEventListener('keydown', onKeyDown));
 onUnmounted(() => document.removeEventListener('keydown', onKeyDown));
 
 // ── Image preview ─────────────────────────────────────────────────────────────
-
-const IMAGE_EXTENSIONS = new Set([
-  'png',
-  'jpg',
-  'jpeg',
-  'gif',
-  'webp',
-  'svg',
-  'bmp',
-  'ico',
-  'tiff',
-  'avif',
-]);
-const IMAGE_MIME: Record<string, string> = {
-  png: 'image/png',
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  gif: 'image/gif',
-  webp: 'image/webp',
-  svg: 'image/svg+xml',
-  bmp: 'image/bmp',
-  ico: 'image/x-icon',
-  tiff: 'image/tiff',
-  avif: 'image/avif',
-};
-
-function isImageFile(path: string): boolean {
-  return IMAGE_EXTENSIONS.has(path.split('.').pop()?.toLowerCase() ?? '');
-}
 
 const selectedIsImage = computed(() => !!staging.selectedPath && isImageFile(staging.selectedPath));
 
@@ -549,8 +519,7 @@ watch(
     imageLoading.value = true;
     try {
       const b64 = await GetFileBase64(repoPath(), path);
-      const ext = path.split('.').pop()?.toLowerCase() ?? '';
-      imageSrc.value = `data:${IMAGE_MIME[ext] ?? 'image/png'};base64,${b64}`;
+      imageSrc.value = imageDataUrl(path, b64);
     } catch {
       imageSrc.value = null;
     } finally {
@@ -562,7 +531,7 @@ watch(
 async function onConflictResolved() {
   await staging.load(repoPath());
   if (!staging.conflictedFiles.find((f) => f.path === staging.selectedPath)) {
-    staging.selectedPath = null;
+    staging.clearSelection();
   }
 }
 
@@ -577,7 +546,7 @@ async function doAbortMerge() {
       commits.load(repoPath()),
       branches.load(repoPath()),
     ]);
-    staging.selectedPath = null;
+    staging.clearSelection();
     toast.success('Merge aborted');
   } catch (e) {
     toast.error(String(e));
@@ -594,7 +563,7 @@ async function doContinueRebase() {
       commits.load(repoPath()),
       branches.load(repoPath()),
     ]);
-    staging.selectedPath = null;
+    staging.clearSelection();
     if (staging.isInRebase) {
       toast.success('Conflict resolved — next commit has conflicts, keep resolving');
     } else {
@@ -619,7 +588,7 @@ async function doAbortRebase() {
       commits.load(repoPath()),
       branches.load(repoPath()),
     ]);
-    staging.selectedPath = null;
+    staging.clearSelection();
     toast.success('Rebase aborted');
   } catch (e) {
     toast.error(String(e));
@@ -631,7 +600,9 @@ async function doAbortRebase() {
   <div class="staging-outer">
     <!-- Merge in progress banner -->
     <div v-if="staging.isInMerge" class="merge-banner">
-      <span class="merge-banner-text">⚡ Merge in progress — resolve all conflicts, then commit</span>
+      <span class="merge-banner-text"
+        >⚡ Merge in progress — resolve all conflicts, then commit</span
+      >
       <div v-if="confirmingAbort" class="merge-abort-confirm">
         <span class="merge-abort-confirm-text">Discard all resolutions?</span>
         <button class="merge-abort-btn merge-abort-btn--confirm" @click="doAbortMerge">
@@ -651,7 +622,9 @@ async function doAbortRebase() {
         <span v-if="staging.rebaseState.total" class="rebase-step">
           {{ staging.rebaseState.step }}/{{ staging.rebaseState.total }}
         </span>
-        <span v-if="staging.rebaseState.onto" class="rebase-onto">onto {{ staging.rebaseState.onto }}</span>
+        <span v-if="staging.rebaseState.onto" class="rebase-onto"
+          >onto {{ staging.rebaseState.onto }}</span
+        >
         <span v-if="staging.rebaseState.message" class="rebase-msg">{{
           staging.rebaseState.message
         }}</span>
@@ -780,7 +753,9 @@ async function doAbortRebase() {
               :disabled="staging.conflictedFiles.length > 0"
               @click="doContinueRebase"
             >
-              <span v-if="staging.conflictedFiles.length > 0">Resolve {{ staging.conflictedFiles.length }} conflict(s) first</span>
+              <span v-if="staging.conflictedFiles.length > 0"
+                >Resolve {{ staging.conflictedFiles.length }} conflict(s) first</span
+              >
               <span v-else>↪ Continue Rebase</span>
             </button>
           </template>
@@ -875,7 +850,7 @@ async function doAbortRebase() {
   <Teleport to="body">
     <div
       v-if="fileCtxMenu"
-      id="file-ctx-menu"
+      ref="fileCtxMenuEl"
       class="ctx-menu"
       :style="{ left: fileCtxMenu.x + 'px', top: fileCtxMenu.y + 'px' }"
     >
