@@ -12,20 +12,20 @@ import {
 } from '../../../wailsjs/go/main/App';
 
 const props = defineProps<{
-  row: GraphRow
-  repoPath: string
-  x: number
-  y: number
+  row: GraphRow;
+  repoPath: string;
+  x: number;
+  y: number;
 }>();
 
 const emit = defineEmits<{
-  close: []
-  refresh: []
+  close: [];
+  refresh: [];
 }>();
 
 const toast = useToastStore();
 
-type Mode = 'menu' | 'branch' | 'tag' | 'revert-confirm'
+type Mode = 'menu' | 'branch' | 'tag' | 'revert-confirm';
 const mode = ref<Mode>('menu');
 const inputVal = ref('');
 const inputEl = ref<HTMLInputElement | null>(null);
@@ -35,7 +35,9 @@ const style = ref({ top: '0px', left: '0px' });
 
 onMounted(() => {
   const el = menuEl.value;
-  if (!el) {return;}
+  if (!el) {
+    return;
+  }
   const { x, y } = clampMenuPosition(el, props.x, props.y);
   style.value = { top: `${y}px`, left: `${x}px` };
 
@@ -55,7 +57,9 @@ function onOutside(e: MouseEvent) {
 }
 
 function onKey(e: KeyboardEvent) {
-  if (e.key === 'Escape') {emit('close');}
+  if (e.key === 'Escape') {
+    emit('close');
+  }
 }
 
 // ── Actions ──────────────────────────────────────────────────────────────────
@@ -71,7 +75,9 @@ async function checkout() {
     await CheckoutRef(props.repoPath, props.row.hash);
     toast.success(`Checked out ${props.row.shortHash} (detached HEAD)`);
     emit('refresh');
-  } catch (e) { toast.error(String(e)); }
+  } catch (e) {
+    toast.error(String(e));
+  }
   emit('close');
 }
 
@@ -83,12 +89,16 @@ function openBranchInput() {
 
 async function confirmBranch() {
   const name = inputVal.value.trim();
-  if (!name) {return;}
+  if (!name) {
+    return;
+  }
   try {
     await CreateBranchAt(props.repoPath, name, props.row.hash);
     toast.success(`Branch '${name}' created at ${props.row.shortHash}`);
     emit('refresh');
-  } catch (e) { toast.error(String(e)); }
+  } catch (e) {
+    toast.error(String(e));
+  }
   emit('close');
 }
 
@@ -99,11 +109,15 @@ function openRevertConfirm() {
 async function revert(commitImmediately: boolean) {
   try {
     await RevertCommit(props.repoPath, props.row.hash, commitImmediately);
-    toast.success(commitImmediately
-      ? `Reverted ${props.row.shortHash} (new commit created)`
-      : `Reverted ${props.row.shortHash} — changes staged, ready to commit`);
+    toast.success(
+      commitImmediately
+        ? `Reverted ${props.row.shortHash} (new commit created)`
+        : `Reverted ${props.row.shortHash} — changes staged, ready to commit`
+    );
     emit('refresh');
-  } catch (e) { toast.error(String(e)); }
+  } catch (e) {
+    toast.error(String(e));
+  }
   emit('close');
 }
 
@@ -112,7 +126,9 @@ async function reset(resetMode: 'soft' | 'mixed' | 'hard') {
     await ResetBranch(props.repoPath, props.row.hash, resetMode);
     toast.success(`Branch reset (${resetMode}) to ${props.row.shortHash}`);
     emit('refresh');
-  } catch (e) { toast.error(String(e)); }
+  } catch (e) {
+    toast.error(String(e));
+  }
   emit('close');
 }
 
@@ -124,19 +140,22 @@ function openTagInput() {
 
 async function confirmTag() {
   const name = inputVal.value.trim();
-  if (!name) {return;}
+  if (!name) {
+    return;
+  }
   try {
     await CreateTag(props.repoPath, name, props.row.hash);
     toast.success(`Tag '${name}' created at ${props.row.shortHash}`);
     emit('refresh');
-  } catch (e) { toast.error(String(e)); }
+  } catch (e) {
+    toast.error(String(e));
+  }
   emit('close');
 }
 </script>
 
 <template>
   <div ref="menuEl" class="ctx-menu" :style="style" @click.stop>
-
     <!-- ── Revert confirmation ──────────────────── -->
     <template v-if="mode === 'revert-confirm'">
       <div class="ctx-input-header">Revert {{ row.shortHash }}</div>
@@ -144,7 +163,9 @@ async function confirmTag() {
       <div class="ctx-confirm-row">
         <button class="ctx-confirm-btn ctx-confirm-btn--yes" @click="revert(true)">Yes</button>
         <button class="ctx-confirm-btn ctx-confirm-btn--no" @click="revert(false)">No</button>
-        <button class="ctx-confirm-btn ctx-confirm-btn--cancel" @click="emit('close')">Cancel</button>
+        <button class="ctx-confirm-btn ctx-confirm-btn--cancel" @click="emit('close')">
+          Cancel
+        </button>
       </div>
     </template>
 
@@ -202,14 +223,17 @@ async function confirmTag() {
 
       <div class="ctx-group-label">Reset branch to here</div>
       <button class="ctx-item ctx-item--indent" @click="reset('soft')">Soft — keep staged</button>
-      <button class="ctx-item ctx-item--indent" @click="reset('mixed')">Mixed — keep working tree</button>
-      <button class="ctx-item ctx-item--indent ctx-item--danger" @click="reset('hard')">Hard — discard all changes</button>
+      <button class="ctx-item ctx-item--indent" @click="reset('mixed')">
+        Mixed — keep working tree
+      </button>
+      <button class="ctx-item ctx-item--indent ctx-item--danger" @click="reset('hard')">
+        Hard — discard all changes
+      </button>
 
       <div class="ctx-divider" />
 
       <button class="ctx-item" @click="openTagInput">Create tag here…</button>
     </template>
-
   </div>
 </template>
 
@@ -222,7 +246,7 @@ async function confirmTag() {
   border: 1px solid #2a2a50;
   border-radius: 7px;
   padding: 4px 0;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
   user-select: none;
 }
 
@@ -255,13 +279,27 @@ async function confirmTag() {
   cursor: pointer;
   white-space: nowrap;
 }
-.ctx-item:hover { background: #1e1e42; color: #eef; }
+.ctx-item:hover {
+  background: #1e1e42;
+  color: #eef;
+}
 
-.ctx-item--indent { padding-left: 22px; color: #99a; font-size: 11px; }
-.ctx-item--indent:hover { color: #ccd; }
+.ctx-item--indent {
+  padding-left: 22px;
+  color: #99a;
+  font-size: 11px;
+}
+.ctx-item--indent:hover {
+  color: #ccd;
+}
 
-.ctx-item--danger { color: #f08080; }
-.ctx-item--danger:hover { background: #2a1818; color: #f74f4f; }
+.ctx-item--danger {
+  color: #f08080;
+}
+.ctx-item--danger:hover {
+  background: #2a1818;
+  color: #f74f4f;
+}
 
 .ctx-group-label {
   padding: 5px 14px 2px;
@@ -296,12 +334,31 @@ async function confirmTag() {
   border: 1px solid transparent;
 }
 
-.ctx-confirm-btn--yes    { background: #1e3d28; color: #4ff7a0; border-color: #2a5a38; }
-.ctx-confirm-btn--yes:hover { background: #254830; }
-.ctx-confirm-btn--no     { background: #1a2848; color: #7aadff; border-color: #2a3a60; }
-.ctx-confirm-btn--no:hover { background: #1e3060; }
-.ctx-confirm-btn--cancel { background: transparent; color: #667; border-color: #334; }
-.ctx-confirm-btn--cancel:hover { color: #889; border-color: #556; }
+.ctx-confirm-btn--yes {
+  background: #1e3d28;
+  color: #4ff7a0;
+  border-color: #2a5a38;
+}
+.ctx-confirm-btn--yes:hover {
+  background: #254830;
+}
+.ctx-confirm-btn--no {
+  background: #1a2848;
+  color: #7aadff;
+  border-color: #2a3a60;
+}
+.ctx-confirm-btn--no:hover {
+  background: #1e3060;
+}
+.ctx-confirm-btn--cancel {
+  background: transparent;
+  color: #667;
+  border-color: #334;
+}
+.ctx-confirm-btn--cancel:hover {
+  color: #889;
+  border-color: #556;
+}
 
 /* Input mode */
 .ctx-input-header {
@@ -328,8 +385,12 @@ async function confirmTag() {
   outline: none;
   font-family: monospace;
 }
-.ctx-input:focus { border-color: #4f8ef7; }
-.ctx-input::placeholder { color: #334; }
+.ctx-input:focus {
+  border-color: #4f8ef7;
+}
+.ctx-input::placeholder {
+  color: #334;
+}
 
 .ctx-confirm {
   padding: 4px 10px;
@@ -341,5 +402,7 @@ async function confirmTag() {
   cursor: pointer;
   white-space: nowrap;
 }
-.ctx-confirm:hover { background: #6aa0f8; }
+.ctx-confirm:hover {
+  background: #6aa0f8;
+}
 </style>

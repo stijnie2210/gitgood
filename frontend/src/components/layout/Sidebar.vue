@@ -6,7 +6,12 @@ import { useBranchesStore } from '../../stores/branches';
 import { useCommitsStore } from '../../stores/commits';
 import { useStagingStore } from '../../stores/staging';
 import { useToastStore } from '../../stores/toast';
-import { StartRebase, DeleteBranch, RenameBranch, PushNamedBranch } from '../../../wailsjs/go/main/App';
+import {
+  StartRebase,
+  DeleteBranch,
+  RenameBranch,
+  PushNamedBranch,
+} from '../../../wailsjs/go/main/App';
 
 const repos = useReposStore();
 const branches = useBranchesStore();
@@ -16,7 +21,7 @@ const toast = useToastStore();
 
 watch(
   () => repos.activeRepo?.path,
-  path => {
+  (path) => {
     if (path) {
       branches.load(path);
     } else {
@@ -33,7 +38,7 @@ async function switchTo(target: string, trackRemote: boolean) {
   }
 
   if (!trackRemote) {
-    const current = branches.local.find(b => b.isCurrent);
+    const current = branches.local.find((b) => b.isCurrent);
     if (current?.name === target) {
       return;
     }
@@ -41,11 +46,7 @@ async function switchTo(target: string, trackRemote: boolean) {
 
   try {
     const result = await branches.switchBranch(repoPath, target, trackRemote);
-    await Promise.all([
-      branches.load(repoPath),
-      commits.load(repoPath),
-      staging.load(repoPath),
-    ]);
+    await Promise.all([branches.load(repoPath), commits.load(repoPath), staging.load(repoPath)]);
     if (result.conflictFiles && result.conflictFiles.length > 0) {
       toast.error(result.message + ': ' + result.conflictFiles.join(', '));
     } else {
@@ -58,26 +59,41 @@ async function switchTo(target: string, trackRemote: boolean) {
 
 // ── Context menu ──────────────────────────────────────────────────────────
 
-type CtxMode = 'default' | 'rename' | 'confirm-delete'
+type CtxMode = 'default' | 'rename' | 'confirm-delete';
 
 interface CtxMenu {
-  x: number
-  y: number
-  target: string
-  label: string
-  isLocal: boolean
-  isCurrent: boolean
-  mode: CtxMode
-  renameValue: string
+  x: number;
+  y: number;
+  target: string;
+  label: string;
+  isLocal: boolean;
+  isCurrent: boolean;
+  mode: CtxMode;
+  renameValue: string;
 }
 
 const ctxMenu = ref<CtxMenu | null>(null);
 const renameInputRef = ref<HTMLInputElement | null>(null);
 
-async function openCtxMenu(e: MouseEvent, target: string, label: string, isLocal: boolean, isCurrent: boolean) {
+async function openCtxMenu(
+  e: MouseEvent,
+  target: string,
+  label: string,
+  isLocal: boolean,
+  isCurrent: boolean
+) {
   e.preventDefault();
   e.stopPropagation();
-  ctxMenu.value = { x: e.clientX, y: e.clientY, target, label, isLocal, isCurrent, mode: 'default', renameValue: label };
+  ctxMenu.value = {
+    x: e.clientX,
+    y: e.clientY,
+    target,
+    label,
+    isLocal,
+    isCurrent,
+    mode: 'default',
+    renameValue: label,
+  };
   await nextTick();
   const menu = document.getElementById('branch-ctx-menu');
   if (menu && ctxMenu.value) {
@@ -236,12 +252,14 @@ async function confirmDelete(force: boolean) {
                 v-if="branches.aheadBehind.ahead > 0"
                 class="sync-badge ahead"
                 title="Commits to push"
-              >↑{{ branches.aheadBehind.ahead }}</span>
+                >↑{{ branches.aheadBehind.ahead }}</span
+              >
               <span
                 v-if="branches.aheadBehind.behind > 0"
                 class="sync-badge behind"
                 title="Commits to pull"
-              >↓{{ branches.aheadBehind.behind }}</span>
+                >↓{{ branches.aheadBehind.behind }}</span
+              >
             </template>
           </li>
         </ul>
@@ -256,10 +274,13 @@ async function confirmDelete(force: boolean) {
             class="branch-item remote"
             :title="'Double-click to check out ' + b.remote + '/' + b.name"
             @dblclick="switchTo(b.remote + '/' + b.name, true)"
-            @contextmenu="openCtxMenu($event, b.remote + '/' + b.name, b.remote + '/' + b.name, false, false)"
+            @contextmenu="
+              openCtxMenu($event, b.remote + '/' + b.name, b.remote + '/' + b.name, false, false)
+            "
           >
             <span class="branch-icon">↑</span>
-            <span class="remote-label">{{ b.remote }}</span>/{{ b.name }}
+            <span class="remote-label">{{ b.remote }}</span
+            >/{{ b.name }}
           </li>
         </ul>
       </section>
@@ -281,24 +302,21 @@ async function confirmDelete(force: boolean) {
         <button
           v-if="!ctxMenu.isCurrent"
           class="ctx-menu-item ctx-menu-item-primary"
-          @click="switchTo(ctxMenu!.target, !ctxMenu!.isLocal); closeCtxMenu()"
+          @click="
+            switchTo(ctxMenu!.target, !ctxMenu!.isLocal);
+            closeCtxMenu();
+          "
         >
           Checkout
         </button>
-        <button v-if="ctxMenu.isLocal" class="ctx-menu-item" @click="pushBranch()">
-          Push
-        </button>
-        <button class="ctx-menu-item" @click="copyBranchName()">
-          Copy branch name
-        </button>
+        <button v-if="ctxMenu.isLocal" class="ctx-menu-item" @click="pushBranch()">Push</button>
+        <button class="ctx-menu-item" @click="copyBranchName()">Copy branch name</button>
         <button class="ctx-menu-item" @click="rebaseOnto(ctxMenu!.target)">
           Rebase current branch onto this
         </button>
         <template v-if="ctxMenu.isLocal">
           <div class="ctx-menu-divider" />
-          <button class="ctx-menu-item" @click="startRename()">
-            Rename
-          </button>
+          <button class="ctx-menu-item" @click="startRename()">Rename</button>
           <button
             class="ctx-menu-item ctx-menu-item-danger"
             :disabled="ctxMenu.isCurrent"
@@ -332,8 +350,12 @@ async function confirmDelete(force: boolean) {
       <template v-else-if="ctxMenu.mode === 'confirm-delete'">
         <div class="ctx-menu-confirm">
           <p class="ctx-menu-confirm-text">Delete "{{ ctxMenu.label }}"?</p>
-          <button class="ctx-menu-item ctx-menu-item-danger" @click="confirmDelete(false)">Delete</button>
-          <button class="ctx-menu-item ctx-menu-item-danger" @click="confirmDelete(true)">Force Delete</button>
+          <button class="ctx-menu-item ctx-menu-item-danger" @click="confirmDelete(false)">
+            Delete
+          </button>
+          <button class="ctx-menu-item ctx-menu-item-danger" @click="confirmDelete(true)">
+            Force Delete
+          </button>
           <button class="ctx-menu-item" @click="closeCtxMenu()">Cancel</button>
         </div>
       </template>
@@ -369,7 +391,9 @@ async function confirmDelete(force: boolean) {
   font-size: 13px;
 }
 
-.branch-section { padding: 8px 0; }
+.branch-section {
+  padding: 8px 0;
+}
 
 .section-title {
   padding: 4px 12px;
@@ -400,12 +424,27 @@ async function confirmDelete(force: boolean) {
   -webkit-user-select: none;
 }
 
-.branch-item:hover { background: #1e2d50; color: #ddd; }
-.branch-item.current { color: #4f8ef7; font-weight: 500; cursor: default; }
-.branch-item.remote { color: #9aaabb; }
+.branch-item:hover {
+  background: #1e2d50;
+  color: #ddd;
+}
+.branch-item.current {
+  color: #4f8ef7;
+  font-weight: 500;
+  cursor: default;
+}
+.branch-item.remote {
+  color: #9aaabb;
+}
 
-.branch-icon { font-size: 10px; color: #7a8899; flex-shrink: 0; }
-.branch-item.current .branch-icon { color: #4f8ef7; }
+.branch-icon {
+  font-size: 10px;
+  color: #7a8899;
+  flex-shrink: 0;
+}
+.branch-item.current .branch-icon {
+  color: #4f8ef7;
+}
 
 .branch-name {
   flex: 1;
@@ -434,7 +473,10 @@ async function confirmDelete(force: boolean) {
   border: 1px solid rgba(247, 160, 79, 0.25);
 }
 
-.remote-label { color: #7a8899; font-size: 11px; }
+.remote-label {
+  color: #7a8899;
+  font-size: 11px;
+}
 </style>
 
 <!-- Context menu styles are global (it's teleported to body) -->
@@ -445,7 +487,7 @@ async function confirmDelete(force: boolean) {
   background: #1a1a2e;
   border: 1px solid #2d2d4e;
   border-radius: 6px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
   min-width: 220px;
   padding: 4px 0;
 }
@@ -479,12 +521,26 @@ async function confirmDelete(force: boolean) {
   font-size: 12px;
   cursor: pointer;
 }
-.ctx-menu-item:hover:not(:disabled) { background: #1e2d50; color: #dde; }
-.ctx-menu-item-primary { color: #4f8ef7; font-weight: 500; }
-.ctx-menu-item:disabled { opacity: 0.35; cursor: default; }
+.ctx-menu-item:hover:not(:disabled) {
+  background: #1e2d50;
+  color: #dde;
+}
+.ctx-menu-item-primary {
+  color: #4f8ef7;
+  font-weight: 500;
+}
+.ctx-menu-item:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
 
-.ctx-menu-item-danger { color: #f07070; }
-.ctx-menu-item-danger:hover:not(:disabled) { background: rgba(240, 80, 80, 0.12); color: #f09090; }
+.ctx-menu-item-danger {
+  color: #f07070;
+}
+.ctx-menu-item-danger:hover:not(:disabled) {
+  background: rgba(240, 80, 80, 0.12);
+  color: #f09090;
+}
 
 /* Rename mode */
 .ctx-menu-rename {
@@ -505,7 +561,9 @@ async function confirmDelete(force: boolean) {
   outline: none;
   font-family: monospace;
 }
-.ctx-menu-input:focus { border-color: #4f8ef7; }
+.ctx-menu-input:focus {
+  border-color: #4f8ef7;
+}
 
 .ctx-menu-row {
   display: flex;
@@ -522,7 +580,9 @@ async function confirmDelete(force: boolean) {
   font-size: 12px;
   cursor: pointer;
 }
-.ctx-menu-btn-primary:hover { background: #6aa3ff; }
+.ctx-menu-btn-primary:hover {
+  background: #6aa3ff;
+}
 
 .ctx-menu-btn {
   flex: 1;
@@ -534,7 +594,10 @@ async function confirmDelete(force: boolean) {
   font-size: 12px;
   cursor: pointer;
 }
-.ctx-menu-btn:hover { background: #2d2d50; color: #ccc; }
+.ctx-menu-btn:hover {
+  background: #2d2d50;
+  color: #ccc;
+}
 
 /* Delete confirm mode */
 .ctx-menu-confirm {

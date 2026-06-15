@@ -25,11 +25,15 @@ const disabled = computed(() => !repos.activeRepo);
 const busy = ref<string | null>(null);
 
 async function run(op: string, fn: () => Promise<void>, successMsg?: string) {
-  if (busy.value) {return;}
+  if (busy.value) {
+    return;
+  }
   busy.value = op;
   try {
     await fn();
-    if (successMsg) {toast.success(successMsg);}
+    if (successMsg) {
+      toast.success(successMsg);
+    }
   } catch (e: unknown) {
     toast.error(String(e));
   } finally {
@@ -38,41 +42,61 @@ async function run(op: string, fn: () => Promise<void>, successMsg?: string) {
 }
 
 async function onFetch() {
-  await run('fetch', async () => {
-    await staging.fetchAll(repoPath.value);
-    await commits.load(repoPath.value);
-    branches.load(repoPath.value);
-  }, 'Fetched successfully');
+  await run(
+    'fetch',
+    async () => {
+      await staging.fetchAll(repoPath.value);
+      await commits.load(repoPath.value);
+      branches.load(repoPath.value);
+    },
+    'Fetched successfully'
+  );
 }
 
 async function onPull() {
-  await run('pull', async () => {
-    await staging.pullBranch(repoPath.value);
-    await commits.load(repoPath.value);
-    staging.load(repoPath.value);
-    branches.load(repoPath.value);
-  }, 'Pulled successfully');
+  await run(
+    'pull',
+    async () => {
+      await staging.pullBranch(repoPath.value);
+      await commits.load(repoPath.value);
+      staging.load(repoPath.value);
+      branches.load(repoPath.value);
+    },
+    'Pulled successfully'
+  );
 }
 
 async function onPush() {
-  await run('push', async () => {
-    await PushBranch(repoPath.value);
-    branches.load(repoPath.value);
-  }, 'Pushed successfully');
+  await run(
+    'push',
+    async () => {
+      await PushBranch(repoPath.value);
+      branches.load(repoPath.value);
+    },
+    'Pushed successfully'
+  );
 }
 
 async function onStash() {
-  await run('stash', async () => {
-    await Stash(repoPath.value);
-    await staging.load(repoPath.value);
-  }, 'Changes stashed');
+  await run(
+    'stash',
+    async () => {
+      await Stash(repoPath.value);
+      await staging.load(repoPath.value);
+    },
+    'Changes stashed'
+  );
 }
 
 async function onPop() {
-  await run('pop', async () => {
-    await StashPop(repoPath.value);
-    await staging.load(repoPath.value);
-  }, 'Stash applied');
+  await run(
+    'pop',
+    async () => {
+      await StashPop(repoPath.value);
+      await staging.load(repoPath.value);
+    },
+    'Stash applied'
+  );
 }
 
 async function onTerminal() {
@@ -85,7 +109,9 @@ const branchName = ref('');
 const branchInputEl = ref<HTMLInputElement | null>(null);
 
 async function openBranchInput() {
-  if (disabled.value) {return;}
+  if (disabled.value) {
+    return;
+  }
   showBranchInput.value = true;
   await nextTick();
   branchInputEl.value?.focus();
@@ -98,17 +124,22 @@ function cancelBranch() {
 
 async function confirmBranch() {
   const name = branchName.value.trim();
-  if (!name) {return;}
+  if (!name) {
+    return;
+  }
   const captured = name;
-  await run('branch', async () => {
-    await CreateBranch(repoPath.value, captured);
-    branches.load(repoPath.value);
-    commits.load(repoPath.value);
-  }, `Branch '${name}' created`);
+  await run(
+    'branch',
+    async () => {
+      await CreateBranch(repoPath.value, captured);
+      branches.load(repoPath.value);
+      commits.load(repoPath.value);
+    },
+    `Branch '${name}' created`
+  );
   showBranchInput.value = false;
   branchName.value = '';
 }
-
 </script>
 
 <template>
@@ -116,26 +147,72 @@ async function confirmBranch() {
     <div class="toolbar-inner">
       <!-- Remote ops group -->
       <div class="btn-group">
-        <button class="tbtn" :disabled="disabled" :class="{ loading: busy === 'fetch' }" @click="onFetch">
+        <button
+          class="tbtn"
+          :disabled="disabled"
+          :class="{ loading: busy === 'fetch' }"
+          @click="onFetch"
+        >
           <span class="tbtn-icon">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="4" y1="3" x2="14" y2="3" /><line x1="9" y1="5" x2="9" y2="13" /><polyline points="5,10 9,14 13,10" />
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 18 18"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="4" y1="3" x2="14" y2="3" />
+              <line x1="9" y1="5" x2="9" y2="13" />
+              <polyline points="5,10 9,14 13,10" />
             </svg>
           </span>
           <span class="tbtn-label">Fetch</span>
         </button>
-        <button class="tbtn" :disabled="disabled" :class="{ loading: busy === 'pull' }" @click="onPull">
+        <button
+          class="tbtn"
+          :disabled="disabled"
+          :class="{ loading: busy === 'pull' }"
+          @click="onPull"
+        >
           <span class="tbtn-icon">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="9" y1="3" x2="9" y2="13" /><polyline points="5,9 9,14 13,9" />
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 18 18"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="9" y1="3" x2="9" y2="13" />
+              <polyline points="5,9 9,14 13,9" />
             </svg>
           </span>
           <span class="tbtn-label">Pull</span>
         </button>
-        <button class="tbtn" :disabled="disabled" :class="{ loading: busy === 'push' }" @click="onPush">
+        <button
+          class="tbtn"
+          :disabled="disabled"
+          :class="{ loading: busy === 'push' }"
+          @click="onPush"
+        >
           <span class="tbtn-icon">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="9" y1="15" x2="9" y2="5" /><polyline points="5,9 9,4 13,9" />
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 18 18"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="9" y1="15" x2="9" y2="5" />
+              <polyline points="5,9 9,4 13,9" />
             </svg>
           </span>
           <span class="tbtn-label">Push</span>
@@ -153,9 +230,20 @@ async function confirmBranch() {
           @click="openBranchInput"
         >
           <span class="tbtn-icon">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-              <circle cx="5" cy="4" r="1.8" /><circle cx="5" cy="14" r="1.8" /><circle cx="13" cy="4" r="1.8" />
-              <line x1="5" y1="6" x2="5" y2="12" /><path d="M13 6 C13 10 5 10 5 12" />
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 18 18"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            >
+              <circle cx="5" cy="4" r="1.8" />
+              <circle cx="5" cy="14" r="1.8" />
+              <circle cx="13" cy="4" r="1.8" />
+              <line x1="5" y1="6" x2="5" y2="12" />
+              <path d="M13 6 C13 10 5 10 5 12" />
             </svg>
           </span>
           <span class="tbtn-label">Branch</span>
@@ -180,18 +268,50 @@ async function confirmBranch() {
 
       <!-- Stash group -->
       <div class="btn-group">
-        <button class="tbtn" :disabled="disabled" :class="{ loading: busy === 'stash' }" @click="onStash">
+        <button
+          class="tbtn"
+          :disabled="disabled"
+          :class="{ loading: busy === 'stash' }"
+          @click="onStash"
+        >
           <span class="tbtn-icon">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="11" width="12" height="4" rx="1.5" /><line x1="9" y1="3" x2="9" y2="10" /><polyline points="6,7 9,10 12,7" />
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 18 18"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="3" y="11" width="12" height="4" rx="1.5" />
+              <line x1="9" y1="3" x2="9" y2="10" />
+              <polyline points="6,7 9,10 12,7" />
             </svg>
           </span>
           <span class="tbtn-label">Stash</span>
         </button>
-        <button class="tbtn" :disabled="disabled" :class="{ loading: busy === 'pop' }" @click="onPop">
+        <button
+          class="tbtn"
+          :disabled="disabled"
+          :class="{ loading: busy === 'pop' }"
+          @click="onPop"
+        >
           <span class="tbtn-icon">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="11" width="12" height="4" rx="1.5" /><line x1="9" y1="9" x2="9" y2="2" /><polyline points="6,5 9,2 12,5" />
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 18 18"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="3" y="11" width="12" height="4" rx="1.5" />
+              <line x1="9" y1="9" x2="9" y2="2" />
+              <polyline points="6,5 9,2 12,5" />
             </svg>
           </span>
           <span class="tbtn-label">Pop</span>
@@ -204,15 +324,24 @@ async function confirmBranch() {
       <div class="btn-group">
         <button class="tbtn" :disabled="disabled" @click="onTerminal">
           <span class="tbtn-icon">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="3,6 8,9 3,12" /><line x1="10" y1="12" x2="15" y2="12" />
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 18 18"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="3,6 8,9 3,12" />
+              <line x1="10" y1="12" x2="15" y2="12" />
             </svg>
           </span>
           <span class="tbtn-label">Terminal</span>
         </button>
       </div>
     </div>
-
   </div>
 </template>
 
@@ -260,7 +389,9 @@ async function confirmBranch() {
   color: #778;
   cursor: pointer;
   min-width: 52px;
-  transition: background 0.1s, color 0.1s;
+  transition:
+    background 0.1s,
+    color 0.1s;
 }
 
 .tbtn:hover:not(:disabled) {
@@ -296,7 +427,9 @@ async function confirmBranch() {
   animation: spin 0.8s linear infinite;
 }
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Branch popover */
@@ -312,7 +445,7 @@ async function confirmBranch() {
   border-radius: 6px;
   padding: 6px 8px;
   z-index: 100;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   min-width: 220px;
 }
 
@@ -327,8 +460,12 @@ async function confirmBranch() {
   outline: none;
   font-family: monospace;
 }
-.branch-input:focus { border-color: #4f8ef7; }
-.branch-input::placeholder { color: #667; }
+.branch-input:focus {
+  border-color: #4f8ef7;
+}
+.branch-input::placeholder {
+  color: #667;
+}
 
 .branch-confirm {
   padding: 4px 10px;
@@ -340,7 +477,9 @@ async function confirmBranch() {
   cursor: pointer;
   white-space: nowrap;
 }
-.branch-confirm:hover { background: #6aa0f8; }
+.branch-confirm:hover {
+  background: #6aa0f8;
+}
 
 .branch-cancel {
   padding: 4px 6px;
@@ -351,6 +490,8 @@ async function confirmBranch() {
   font-size: 11px;
   cursor: pointer;
 }
-.branch-cancel:hover { color: #aab; border-color: #667; }
-
+.branch-cancel:hover {
+  color: #aab;
+  border-color: #667;
+}
 </style>

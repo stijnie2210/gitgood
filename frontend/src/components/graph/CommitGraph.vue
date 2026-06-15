@@ -19,13 +19,20 @@ const searchInputRef = ref<HTMLInputElement | null>(null);
 
 const filteredRows = computed(() => {
   const q = searchQuery.value.trim().toLowerCase();
-  if (!q) {return commits.rows;}
-  return commits.rows.filter(r =>
-    r.hash.startsWith(q) ||
-    r.subject.toLowerCase().includes(q) ||
-    r.author.toLowerCase().includes(q)
+  if (!q) {
+    return commits.rows;
+  }
+  return commits.rows.filter(
+    (r) =>
+      r.hash.startsWith(q) ||
+      r.subject.toLowerCase().includes(q) ||
+      r.author.toLowerCase().includes(q)
   );
 });
+
+const selectedIndex = computed(() =>
+  commits.selectedHash ? filteredRows.value.findIndex((r) => r.hash === commits.selectedHash) : -1
+);
 
 const virtualizer = useVirtualizer(
   computed(() => ({
@@ -42,11 +49,14 @@ const graphWidth = computed(() => (commits.maxColumn + 2) * CELL_W);
 
 watch(
   () => repos.activeRepo?.path,
-  path => {
-    if (path) {commits.load(path);}
-    else {commits.clear();}
+  (path) => {
+    if (path) {
+      commits.load(path);
+    } else {
+      commits.clear();
+    }
   },
-  { immediate: true },
+  { immediate: true }
 );
 
 // Scroll to top when search results change so first match is visible
@@ -68,16 +78,52 @@ function onGlobalKeyDown(e: KeyboardEvent) {
   if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
     e.preventDefault();
     openSearch();
+    return;
   }
+
+  if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') {
+    return;
+  }
+  if (
+    e.target instanceof HTMLElement &&
+    (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')
+  ) {
+    return;
+  }
+
+  e.preventDefault();
+  const total = filteredRows.value.length;
+  if (total === 0 || !repos.activeRepo) {
+    return;
+  }
+
+  const idx = selectedIndex.value;
+  const next =
+    e.key === 'ArrowUp'
+      ? Math.max(0, idx <= 0 ? 0 : idx - 1)
+      : idx < 0
+        ? 0
+        : Math.min(idx + 1, total - 1);
+
+  if (next === idx && idx >= 0) {
+    return;
+  }
+
+  commits.selectCommit(repos.activeRepo.path, filteredRows.value[next].hash);
+  virtualizer.value.scrollToIndex(next, { align: 'auto' });
 }
 
 function onSearchKeyDown(e: KeyboardEvent) {
-  if (e.key === 'Escape') {closeSearch();}
+  if (e.key === 'Escape') {
+    closeSearch();
+  }
 }
 
 function onScroll() {
   const el = parentRef.value;
-  if (!el || commits.loadingMore || !commits.hasMore) {return;}
+  if (!el || commits.loadingMore || !commits.hasMore) {
+    return;
+  }
   if (el.scrollTop + el.clientHeight >= el.scrollHeight - 300) {
     commits.loadMore();
   }
@@ -176,7 +222,10 @@ async function onMenuRefresh() {
       />
 
       <div v-if="commits.loadingMore" class="loading-more">Loading more commits…</div>
-      <div v-else-if="!commits.hasMore && commits.rows.length > 0 && !searchQuery.trim()" class="load-end">
+      <div
+        v-else-if="!commits.hasMore && commits.rows.length > 0 && !searchQuery.trim()"
+        class="load-end"
+      >
         {{ commits.rows.length }} commits loaded
       </div>
     </div>
@@ -233,7 +282,9 @@ async function onMenuRefresh() {
   padding: 0 2px;
 }
 
-.search-close:hover { color: #aaa; }
+.search-close:hover {
+  color: #aaa;
+}
 
 .graph-scroller {
   flex: 1;

@@ -4,41 +4,44 @@ import { useToastStore } from '../../stores/toast';
 import { GetConflictContent, ResolveConflict } from '../../../wailsjs/go/main/App';
 
 const props = defineProps<{
-  repoPath: string
-  path: string
+  repoPath: string;
+  path: string;
 }>();
 
 const emit = defineEmits<{
-  resolved: []
+  resolved: [];
 }>();
 
 const toast = useToastStore();
 const loading = ref(true);
 const saving = ref(false);
 
-type SelectedLine = { side: 'ours' | 'theirs'; index: number }
+type SelectedLine = { side: 'ours' | 'theirs'; index: number };
 
-type ContextChunk = { type: 'context'; lines: string[] }
+type ContextChunk = { type: 'context'; lines: string[] };
 type ConflictChunk = {
-  type: 'conflict'
-  ours: string[]
-  theirs: string[]
-  oursLabel: string
-  theirsLabel: string
-  accepted: 'ours' | 'theirs' | 'custom' | null
-  selection: SelectedLine[]
-  textOverride: string | null  // set when user manually edits preview; null = derive from selection
-}
-type Chunk = ContextChunk | ConflictChunk
+  type: 'conflict';
+  ours: string[];
+  theirs: string[];
+  oursLabel: string;
+  theirsLabel: string;
+  accepted: 'ours' | 'theirs' | 'custom' | null;
+  selection: SelectedLine[];
+  textOverride: string | null; // set when user manually edits preview; null = derive from selection
+};
+type Chunk = ContextChunk | ConflictChunk;
 
 const chunks = ref<Chunk[]>([]);
 
-const unresolvedCount = computed(() =>
-  chunks.value.filter(c => {
-    if (c.type !== 'conflict') {return false;}
-    const cc = c as ConflictChunk;
-    return cc.selection.length === 0 && cc.textOverride === null;
-  }).length
+const unresolvedCount = computed(
+  () =>
+    chunks.value.filter((c) => {
+      if (c.type !== 'conflict') {
+        return false;
+      }
+      const cc = c as ConflictChunk;
+      return cc.selection.length === 0 && cc.textOverride === null;
+    }).length
 );
 
 onMounted(async () => {
@@ -64,7 +67,9 @@ function parseConflicts(text: string): Chunk[] {
 
   for (const line of lines) {
     if (line.startsWith('<<<<<<< ')) {
-      if (contextLines.length) {result.push({ type: 'context', lines: [...contextLines] });}
+      if (contextLines.length) {
+        result.push({ type: 'context', lines: [...contextLines] });
+      }
       contextLines = [];
       oursLabel = line.slice(8);
       oursLines = [];
@@ -74,29 +79,48 @@ function parseConflicts(text: string): Chunk[] {
       theirsLines = [];
     } else if (line.startsWith('>>>>>>> ') && state === 'theirs') {
       const theirsLabel = line.slice(8);
-      result.push({ type: 'conflict', ours: [...oursLines], theirs: [...theirsLines], oursLabel, theirsLabel, accepted: null, selection: [], textOverride: null });
+      result.push({
+        type: 'conflict',
+        ours: [...oursLines],
+        theirs: [...theirsLines],
+        oursLabel,
+        theirsLabel,
+        accepted: null,
+        selection: [],
+        textOverride: null,
+      });
       oursLines = [];
       theirsLines = [];
       state = 'context';
     } else {
-      if (state === 'context') {contextLines.push(line);}
-      else if (state === 'ours') {oursLines.push(line);}
-      else {theirsLines.push(line);}
+      if (state === 'context') {
+        contextLines.push(line);
+      } else if (state === 'ours') {
+        oursLines.push(line);
+      } else {
+        theirsLines.push(line);
+      }
     }
   }
 
-  while (contextLines.length && contextLines[contextLines.length - 1] === '') {contextLines.pop();}
-  if (contextLines.length) {result.push({ type: 'context', lines: contextLines });}
+  while (contextLines.length && contextLines[contextLines.length - 1] === '') {
+    contextLines.pop();
+  }
+  if (contextLines.length) {
+    result.push({ type: 'context', lines: contextLines });
+  }
 
   return result;
 }
 
-function asConflict(c: Chunk): ConflictChunk { return c as ConflictChunk; }
+function asConflict(c: Chunk): ConflictChunk {
+  return c as ConflictChunk;
+}
 
 // ── Selection helpers ────────────────────────────────────────────────────────
 
 function selectionIndex(chunk: ConflictChunk, side: 'ours' | 'theirs', lineIdx: number): number {
-  return chunk.selection.findIndex(s => s.side === side && s.index === lineIdx);
+  return chunk.selection.findIndex((s) => s.side === side && s.index === lineIdx);
 }
 
 function isLineSelected(chunk: ConflictChunk, side: 'ours' | 'theirs', lineIdx: number): boolean {
@@ -120,13 +144,21 @@ function toggleLine(chunk: ConflictChunk, side: 'ours' | 'theirs', lineIdx: numb
 }
 
 function deriveAccepted(chunk: ConflictChunk): 'ours' | 'theirs' | 'custom' | null {
-  if (chunk.selection.length === 0) {return null;}
-  const allOurs = chunk.selection.length === chunk.ours.length &&
+  if (chunk.selection.length === 0) {
+    return null;
+  }
+  const allOurs =
+    chunk.selection.length === chunk.ours.length &&
     chunk.selection.every((s, i) => s.side === 'ours' && s.index === i);
-  if (allOurs) {return 'ours';}
-  const allTheirs = chunk.selection.length === chunk.theirs.length &&
+  if (allOurs) {
+    return 'ours';
+  }
+  const allTheirs =
+    chunk.selection.length === chunk.theirs.length &&
     chunk.selection.every((s, i) => s.side === 'theirs' && s.index === i);
-  if (allTheirs) {return 'theirs';}
+  if (allTheirs) {
+    return 'theirs';
+  }
   return 'custom';
 }
 
@@ -144,14 +176,18 @@ function acceptSide(chunk: ConflictChunk, side: 'ours' | 'theirs') {
 
 function acceptAll(side: 'ours' | 'theirs') {
   for (const chunk of chunks.value) {
-    if (chunk.type === 'conflict') {acceptSide(asConflict(chunk), side);}
+    if (chunk.type === 'conflict') {
+      acceptSide(asConflict(chunk), side);
+    }
   }
 }
 
 // ── Preview / manual edit ────────────────────────────────────────────────────
 
 function previewText(chunk: ConflictChunk): string {
-  return chunk.selection.map(s => (s.side === 'ours' ? chunk.ours : chunk.theirs)[s.index]).join('\n');
+  return chunk.selection
+    .map((s) => (s.side === 'ours' ? chunk.ours : chunk.theirs)[s.index])
+    .join('\n');
 }
 
 function resolvedText(chunk: ConflictChunk): string {
@@ -182,7 +218,9 @@ function buildResolved(): string {
 }
 
 async function saveAndStage() {
-  if (unresolvedCount.value > 0 || saving.value) {return;}
+  if (unresolvedCount.value > 0 || saving.value) {
+    return;
+  }
   saving.value = true;
   try {
     await ResolveConflict(props.repoPath, props.path, buildResolved());
@@ -198,12 +236,13 @@ async function saveAndStage() {
 
 <template>
   <div class="conflict-view">
-
     <!-- Header -->
     <div class="cv-header">
       <span class="cv-filepath">{{ path }}</span>
       <span v-if="!loading" class="cv-status" :class="{ resolved: unresolvedCount === 0 }">
-        <template v-if="unresolvedCount > 0">⚠ {{ unresolvedCount }} conflict{{ unresolvedCount > 1 ? 's' : '' }} remaining</template>
+        <template v-if="unresolvedCount > 0"
+          >⚠ {{ unresolvedCount }} conflict{{ unresolvedCount > 1 ? 's' : '' }} remaining</template
+        >
         <template v-else>✓ All conflicts resolved</template>
       </span>
     </div>
@@ -213,13 +252,15 @@ async function saveAndStage() {
     <!-- Conflict blocks -->
     <div v-else class="cv-body">
       <template v-for="(chunk, i) in chunks" :key="i">
-
         <!-- Context lines -->
         <pre v-if="chunk.type === 'context'" class="cv-context">{{ chunk.lines.join('\n') }}</pre>
 
         <!-- Conflict block -->
-        <div v-else class="cv-conflict" :class="{ 'cv-conflict--resolved': asConflict(chunk).selection.length > 0 }">
-
+        <div
+          v-else
+          class="cv-conflict"
+          :class="{ 'cv-conflict--resolved': asConflict(chunk).selection.length > 0 }"
+        >
           <!-- Ours side -->
           <div class="cv-side-header cv-ours-header">
             <span class="cv-side-label">Ours — {{ asConflict(chunk).oursLabel }}</span>
@@ -227,7 +268,9 @@ async function saveAndStage() {
               class="cv-quick-btn cv-quick-ours"
               :class="{ active: asConflict(chunk).accepted === 'ours' }"
               @click="acceptSide(asConflict(chunk), 'ours')"
-            >{{ asConflict(chunk).accepted === 'ours' ? '✓ All Ours' : 'Accept All Ours' }}</button>
+            >
+              {{ asConflict(chunk).accepted === 'ours' ? '✓ All Ours' : 'Accept All Ours' }}
+            </button>
           </div>
           <div class="cv-lines cv-lines--ours">
             <div
@@ -235,16 +278,26 @@ async function saveAndStage() {
               :key="'o' + li"
               class="cv-line"
               :class="{ 'cv-line--selected': isLineSelected(asConflict(chunk), 'ours', li) }"
-              :title="isLineSelected(asConflict(chunk), 'ours', li) ? 'Click to deselect' : 'Click to include this line'"
+              :title="
+                isLineSelected(asConflict(chunk), 'ours', li)
+                  ? 'Click to deselect'
+                  : 'Click to include this line'
+              "
               @click="toggleLine(asConflict(chunk), 'ours', li)"
             >
               <span class="cv-line-badge">
-                <span v-if="selectionOrder(asConflict(chunk), 'ours', li) > 0" class="cv-badge-num ours">{{ selectionOrder(asConflict(chunk), 'ours', li) }}</span>
+                <span
+                  v-if="selectionOrder(asConflict(chunk), 'ours', li) > 0"
+                  class="cv-badge-num ours"
+                  >{{ selectionOrder(asConflict(chunk), 'ours', li) }}</span
+                >
                 <span v-else class="cv-badge-dot">○</span>
               </span>
               <code class="cv-line-content">{{ line || ' ' }}</code>
             </div>
-            <div v-if="asConflict(chunk).ours.length === 0" class="cv-line cv-line--empty">(empty)</div>
+            <div v-if="asConflict(chunk).ours.length === 0" class="cv-line cv-line--empty">
+              (empty)
+            </div>
           </div>
 
           <div class="cv-separator" />
@@ -256,7 +309,9 @@ async function saveAndStage() {
               class="cv-quick-btn cv-quick-theirs"
               :class="{ active: asConflict(chunk).accepted === 'theirs' }"
               @click="acceptSide(asConflict(chunk), 'theirs')"
-            >{{ asConflict(chunk).accepted === 'theirs' ? '✓ All Theirs' : 'Accept All Theirs' }}</button>
+            >
+              {{ asConflict(chunk).accepted === 'theirs' ? '✓ All Theirs' : 'Accept All Theirs' }}
+            </button>
           </div>
           <div class="cv-lines cv-lines--theirs">
             <div
@@ -264,16 +319,26 @@ async function saveAndStage() {
               :key="'t' + li"
               class="cv-line"
               :class="{ 'cv-line--selected': isLineSelected(asConflict(chunk), 'theirs', li) }"
-              :title="isLineSelected(asConflict(chunk), 'theirs', li) ? 'Click to deselect' : 'Click to include this line'"
+              :title="
+                isLineSelected(asConflict(chunk), 'theirs', li)
+                  ? 'Click to deselect'
+                  : 'Click to include this line'
+              "
               @click="toggleLine(asConflict(chunk), 'theirs', li)"
             >
               <span class="cv-line-badge">
-                <span v-if="selectionOrder(asConflict(chunk), 'theirs', li) > 0" class="cv-badge-num theirs">{{ selectionOrder(asConflict(chunk), 'theirs', li) }}</span>
+                <span
+                  v-if="selectionOrder(asConflict(chunk), 'theirs', li) > 0"
+                  class="cv-badge-num theirs"
+                  >{{ selectionOrder(asConflict(chunk), 'theirs', li) }}</span
+                >
                 <span v-else class="cv-badge-dot">○</span>
               </span>
               <code class="cv-line-content">{{ line || ' ' }}</code>
             </div>
-            <div v-if="asConflict(chunk).theirs.length === 0" class="cv-line cv-line--empty">(empty)</div>
+            <div v-if="asConflict(chunk).theirs.length === 0" class="cv-line cv-line--empty">
+              (empty)
+            </div>
           </div>
 
           <!-- Preview / editor — shown when any selection exists -->
@@ -281,7 +346,9 @@ async function saveAndStage() {
             <div class="cv-preview-header">
               <span>
                 Preview
-                <span v-if="asConflict(chunk).textOverride !== null" class="cv-edited-badge">edited</span>
+                <span v-if="asConflict(chunk).textOverride !== null" class="cv-edited-badge"
+                  >edited</span
+                >
               </span>
               <div class="cv-preview-actions">
                 <button
@@ -289,11 +356,19 @@ async function saveAndStage() {
                   class="cv-clear-btn"
                   title="Reset to selection"
                   @click="resetOverride(asConflict(chunk))"
-                >Reset</button>
+                >
+                  Reset
+                </button>
                 <button
                   class="cv-clear-btn"
-                  @click="asConflict(chunk).selection = []; asConflict(chunk).accepted = null; asConflict(chunk).textOverride = null"
-                >Clear</button>
+                  @click="
+                    asConflict(chunk).selection = [];
+                    asConflict(chunk).accepted = null;
+                    asConflict(chunk).textOverride = null;
+                  "
+                >
+                  Clear
+                </button>
               </div>
             </div>
             <textarea
@@ -303,7 +378,6 @@ async function saveAndStage() {
               @input="onPreviewInput(asConflict(chunk), $event)"
             />
           </template>
-
         </div>
       </template>
     </div>
@@ -318,9 +392,10 @@ async function saveAndStage() {
         :class="{ 'cv-save-btn--ready': unresolvedCount === 0 }"
         :disabled="unresolvedCount > 0 || saving"
         @click="saveAndStage"
-      >{{ saving ? 'Saving…' : 'Save & Stage' }}</button>
+      >
+        {{ saving ? 'Saving…' : 'Save & Stage' }}
+      </button>
     </div>
-
   </div>
 </template>
 
@@ -355,8 +430,14 @@ async function saveAndStage() {
   white-space: nowrap;
 }
 
-.cv-status { font-size: 11px; color: #f0a050; white-space: nowrap; }
-.cv-status.resolved { color: #4ff7a0; }
+.cv-status {
+  font-size: 11px;
+  color: #f0a050;
+  white-space: nowrap;
+}
+.cv-status.resolved {
+  color: #4ff7a0;
+}
 
 .cv-loading {
   flex: 1;
@@ -394,7 +475,9 @@ async function saveAndStage() {
   border-radius: 6px;
   overflow: hidden;
 }
-.cv-conflict--resolved { border-color: #1a3a2a; }
+.cv-conflict--resolved {
+  border-color: #1a3a2a;
+}
 
 /* Side header */
 .cv-side-header {
@@ -404,8 +487,14 @@ async function saveAndStage() {
   padding: 5px 8px 5px 10px;
   border-bottom: 1px solid #1e1e38;
 }
-.cv-ours-header   { background: #121e16; border-color: #1a2e20; }
-.cv-theirs-header { background: #1a1318; border-color: #2a1820; }
+.cv-ours-header {
+  background: #121e16;
+  border-color: #1a2e20;
+}
+.cv-theirs-header {
+  background: #1a1318;
+  border-color: #2a1820;
+}
 
 .cv-side-label {
   font-family: monospace;
@@ -427,17 +516,41 @@ async function saveAndStage() {
   border: 1px solid transparent;
   transition: background 0.1s;
 }
-.cv-quick-ours           { background: #1a2e20; color: #5db880; border-color: #2a4a30; }
-.cv-quick-ours:hover     { background: #1e3828; }
-.cv-quick-ours.active    { background: #1e3828; color: #4ff7a0; }
-.cv-quick-theirs         { background: #1a1a30; color: #5580bb; border-color: #252548; }
-.cv-quick-theirs:hover   { background: #1e1e3a; }
-.cv-quick-theirs.active  { background: #1e2248; color: #7aadff; }
+.cv-quick-ours {
+  background: #1a2e20;
+  color: #5db880;
+  border-color: #2a4a30;
+}
+.cv-quick-ours:hover {
+  background: #1e3828;
+}
+.cv-quick-ours.active {
+  background: #1e3828;
+  color: #4ff7a0;
+}
+.cv-quick-theirs {
+  background: #1a1a30;
+  color: #5580bb;
+  border-color: #252548;
+}
+.cv-quick-theirs:hover {
+  background: #1e1e3a;
+}
+.cv-quick-theirs.active {
+  background: #1e2248;
+  color: #7aadff;
+}
 
 /* Line list */
-.cv-lines { padding: 3px 0; }
-.cv-lines--ours   { background: rgba(79,247,160,0.025); }
-.cv-lines--theirs { background: rgba(122,173,255,0.025); }
+.cv-lines {
+  padding: 3px 0;
+}
+.cv-lines--ours {
+  background: rgba(79, 247, 160, 0.025);
+}
+.cv-lines--theirs {
+  background: rgba(122, 173, 255, 0.025);
+}
 
 /* Individual line */
 .cv-line {
@@ -450,9 +563,15 @@ async function saveAndStage() {
   transition: background 0.08s;
   min-height: 20px;
 }
-.cv-line:hover { background: rgba(255,255,255,0.04); }
-.cv-lines--ours   .cv-line--selected { background: rgba(79,247,160,0.12); }
-.cv-lines--theirs .cv-line--selected { background: rgba(122,173,255,0.12); }
+.cv-line:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.cv-lines--ours .cv-line--selected {
+  background: rgba(79, 247, 160, 0.12);
+}
+.cv-lines--theirs .cv-line--selected {
+  background: rgba(122, 173, 255, 0.12);
+}
 
 .cv-line--empty {
   font-size: 10px;
@@ -470,7 +589,9 @@ async function saveAndStage() {
   font-size: 10px;
   line-height: 20px;
 }
-.cv-badge-dot { color: #2a2a44; }
+.cv-badge-dot {
+  color: #2a2a44;
+}
 .cv-badge-num {
   display: inline-block;
   width: 16px;
@@ -481,8 +602,14 @@ async function saveAndStage() {
   font-weight: 700;
   text-align: center;
 }
-.cv-badge-num.ours   { background: rgba(79,247,160,0.25); color: #4ff7a0; }
-.cv-badge-num.theirs { background: rgba(122,173,255,0.25); color: #7aadff; }
+.cv-badge-num.ours {
+  background: rgba(79, 247, 160, 0.25);
+  color: #4ff7a0;
+}
+.cv-badge-num.theirs {
+  background: rgba(122, 173, 255, 0.25);
+  color: #7aadff;
+}
 
 /* Line content */
 .cv-line-content {
@@ -492,11 +619,18 @@ async function saveAndStage() {
   white-space: pre-wrap;
   word-break: break-all;
 }
-.cv-lines--ours   .cv-line-content { color: #8de8a8; }
-.cv-lines--theirs .cv-line-content { color: #7aadff; }
+.cv-lines--ours .cv-line-content {
+  color: #8de8a8;
+}
+.cv-lines--theirs .cv-line-content {
+  color: #7aadff;
+}
 
 /* Separator between ours/theirs */
-.cv-separator { height: 1px; background: #1e1e30; }
+.cv-separator {
+  height: 1px;
+  background: #1e1e30;
+}
 
 /* Preview / editor */
 .cv-preview-header {
@@ -525,8 +659,8 @@ async function saveAndStage() {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: #f0a050;
-  background: rgba(240,160,80,0.12);
-  border: 1px solid rgba(240,160,80,0.25);
+  background: rgba(240, 160, 80, 0.12);
+  border: 1px solid rgba(240, 160, 80, 0.25);
   border-radius: 3px;
   padding: 0 4px;
   vertical-align: middle;
@@ -544,7 +678,10 @@ async function saveAndStage() {
   font-weight: 400;
   letter-spacing: 0;
 }
-.cv-clear-btn:hover { border-color: #4f8ef7; color: #7aadff; }
+.cv-clear-btn:hover {
+  border-color: #4f8ef7;
+  color: #7aadff;
+}
 
 .cv-preview-editor {
   display: block;
@@ -579,7 +716,9 @@ async function saveAndStage() {
   border-top: 1px solid #1e1e38;
   flex-shrink: 0;
 }
-.cv-footer-spacer { flex: 1; }
+.cv-footer-spacer {
+  flex: 1;
+}
 
 .cv-footer-btn {
   padding: 4px 10px;
@@ -590,7 +729,11 @@ async function saveAndStage() {
   font-size: 11px;
   cursor: pointer;
 }
-.cv-footer-btn:hover { background: #1a1a36; color: #889; border-color: #3a3a68; }
+.cv-footer-btn:hover {
+  background: #1a1a36;
+  color: #889;
+  border-color: #3a3a68;
+}
 
 .cv-save-btn {
   padding: 5px 16px;
@@ -603,7 +746,15 @@ async function saveAndStage() {
   color: #445;
   transition: background 0.15s;
 }
-.cv-save-btn:disabled { cursor: default; }
-.cv-save-btn--ready { background: #1e3d28; color: #4ff7a0; border-color: #2a5a38; }
-.cv-save-btn--ready:hover { background: #254830; }
+.cv-save-btn:disabled {
+  cursor: default;
+}
+.cv-save-btn--ready {
+  background: #1e3d28;
+  color: #4ff7a0;
+  border-color: #2a5a38;
+}
+.cv-save-btn--ready:hover {
+  background: #254830;
+}
 </style>

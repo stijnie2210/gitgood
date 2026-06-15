@@ -117,8 +117,15 @@ onUnmounted(() => window.removeEventListener('mousedown', onWindowMouseDown));
   transition: background 0.1s;
 }
 
-.tab:hover { background: #22223a; color: #ccc; }
-.tab.active { background: #16213e; color: #e0e0e0; border-bottom: 2px solid #4f8ef7; }
+.tab:hover {
+  background: #22223a;
+  color: #ccc;
+}
+.tab.active {
+  background: #16213e;
+  color: #e0e0e0;
+  border-bottom: 2px solid #4f8ef7;
+}
 
 .tab-close {
   opacity: 0.4;
@@ -126,7 +133,10 @@ onUnmounted(() => window.removeEventListener('mousedown', onWindowMouseDown));
   line-height: 1;
   padding: 0 2px;
 }
-.tab-close:hover { opacity: 1; color: #ff6b6b; }
+.tab-close:hover {
+  opacity: 1;
+  color: #ff6b6b;
+}
 
 .tab-add {
   padding: 0 12px;
@@ -138,7 +148,9 @@ onUnmounted(() => window.removeEventListener('mousedown', onWindowMouseDown));
   font-size: 18px;
   line-height: 1;
 }
-.tab-add:hover { color: #aaa; }
+.tab-add:hover {
+  color: #aaa;
+}
 </style>
 
 <style>

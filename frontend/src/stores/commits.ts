@@ -3,8 +3,8 @@ import { ref, computed } from 'vue';
 import { GetCommitGraph, GetCommitDiff } from '../../wailsjs/go/main/App';
 import type { graph, repo } from '../../wailsjs/go/models';
 
-export type GraphRow = graph.GraphRow
-export type FileDiff = repo.FileDiff
+export type GraphRow = graph.GraphRow;
+export type FileDiff = repo.FileDiff;
 
 const INITIAL_LIMIT = 2000;
 const BATCH_SIZE = 2000;
@@ -21,12 +21,12 @@ export const useCommitsStore = defineStore('commits', () => {
   const diffLoading = ref(false);
   const currentRepoPath = ref<string | null>(null);
 
-  const maxColumn = computed(() =>
-    rows.value.reduce((m, r) => Math.max(m, r.maxColumn), 0)
-  );
+  const maxColumn = computed(() => rows.value.reduce((m, r) => Math.max(m, r.maxColumn), 0));
 
   async function load(repoPath: string) {
-    if (!repoPath) {return;}
+    if (!repoPath) {
+      return;
+    }
     loading.value = true;
     loadedLimit.value = INITIAL_LIMIT;
     hasMore.value = false;
@@ -47,7 +47,9 @@ export const useCommitsStore = defineStore('commits', () => {
   }
 
   async function loadMore() {
-    if (loadingMore.value || !hasMore.value || !currentRepoPath.value) {return;}
+    if (loadingMore.value || !hasMore.value || !currentRepoPath.value) {
+      return;
+    }
     loadingMore.value = true;
     const nextLimit = loadedLimit.value + BATCH_SIZE;
     try {
@@ -81,8 +83,18 @@ export const useCommitsStore = defineStore('commits', () => {
   }
 
   return {
-    rows, loading, loadingMore, hasMore, error,
-    selectedHash, diff, diffLoading, maxColumn,
-    load, loadMore, selectCommit, clear,
+    rows,
+    loading,
+    loadingMore,
+    hasMore,
+    error,
+    selectedHash,
+    diff,
+    diffLoading,
+    maxColumn,
+    load,
+    loadMore,
+    selectCommit,
+    clear,
   };
 });

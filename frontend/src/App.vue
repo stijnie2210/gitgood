@@ -25,14 +25,14 @@ onMounted(async () => {
 // Keep staging badge up-to-date regardless of which tab is active
 watch(
   () => repos.activeRepo?.path,
-  path => {
+  (path) => {
     if (path) {
       staging.load(path);
     } else {
       staging.clear();
     }
   },
-  { immediate: true },
+  { immediate: true }
 );
 
 const FETCH_POLL_MS = 60_000;
@@ -40,7 +40,7 @@ let fetchPollTimer: ReturnType<typeof setInterval> | null = null;
 
 watch(
   () => repos.activeRepo?.path,
-  path => {
+  (path) => {
     if (fetchPollTimer !== null) {
       clearInterval(fetchPollTimer);
       fetchPollTimer = null;
@@ -53,7 +53,7 @@ watch(
       branches.silentFetchAndRefresh(path);
     }, FETCH_POLL_MS);
   },
-  { immediate: true },
+  { immediate: true }
 );
 
 onUnmounted(() => {
@@ -69,7 +69,7 @@ function makeResizer(
   width: Ref<number>,
   min: number,
   max: number,
-  direction: 'right' | 'left' = 'right',
+  direction: 'right' | 'left' = 'right'
 ) {
   let startX = 0;
   let startW = 0;
@@ -117,11 +117,7 @@ const startDetailResize = makeResizer(detailWidth, 200, 800, 'left');
           <div v-if="repos.recentRepos.length" class="recents">
             <h3>Recent</h3>
             <ul>
-              <li
-                v-for="r in repos.recentRepos"
-                :key="r.path"
-                @click="repos.openRepo(r.path)"
-              >
+              <li v-for="r in repos.recentRepos" :key="r.path" @click="repos.openRepo(r.path)">
                 <strong>{{ r.name }}</strong>
                 <span>{{ r.path }}</span>
               </li>
@@ -136,7 +132,9 @@ const startDetailResize = makeResizer(detailWidth, 200, 800, 'left');
               class="view-tab"
               :class="{ active: viewMode === 'commits' }"
               @click="viewMode = 'commits'"
-            >Commits</button>
+            >
+              Commits
+            </button>
             <button
               class="view-tab"
               :class="{ active: viewMode === 'staging' }"
@@ -151,7 +149,7 @@ const startDetailResize = makeResizer(detailWidth, 200, 800, 'left');
 
           <!-- Commits view -->
           <div v-if="viewMode === 'commits'" class="repo-view">
-            <CommitGraph style="flex: 1; min-width: 300px;" />
+            <CommitGraph style="flex: 1; min-width: 300px" />
 
             <template v-if="commits.selectedHash">
               <div class="resize-handle" @mousedown.prevent="startDetailResize" />
@@ -168,8 +166,16 @@ const startDetailResize = makeResizer(detailWidth, 200, 800, 'left');
 </template>
 
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: #0f0f1a; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+body {
+  background: #0f0f1a;
+  color: #e0e0e0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
 </style>
 
 <style scoped>
@@ -215,8 +221,14 @@ body { background: #0f0f1a; color: #e0e0e0; font-family: -apple-system, BlinkMac
   font-size: 12px;
   cursor: pointer;
 }
-.view-tab:hover { color: #888; background: #111120; }
-.view-tab.active { color: #ccc; background: #16162a; }
+.view-tab:hover {
+  color: #888;
+  background: #111120;
+}
+.view-tab.active {
+  color: #ccc;
+  background: #16162a;
+}
 
 .view-tab-badge {
   background: #4f8ef7;
@@ -241,7 +253,9 @@ body { background: #0f0f1a; color: #e0e0e0; font-family: -apple-system, BlinkMac
   cursor: col-resize;
   transition: background 0.15s;
 }
-.resize-handle:hover { background: #4f8ef7; }
+.resize-handle:hover {
+  background: #4f8ef7;
+}
 
 .welcome {
   display: flex;
@@ -253,10 +267,22 @@ body { background: #0f0f1a; color: #e0e0e0; font-family: -apple-system, BlinkMac
   color: #666;
 }
 
-.welcome-logo { width: 160px; }
-.welcome-brand { font-size: 32px; font-weight: 700; color: #4f8ef7; margin-top: -4px; }
-.welcome-brand span { color: #ccc; font-weight: 400; }
-.welcome p { font-size: 15px; }
+.welcome-logo {
+  width: 160px;
+}
+.welcome-brand {
+  font-size: 32px;
+  font-weight: 700;
+  color: #4f8ef7;
+  margin-top: -4px;
+}
+.welcome-brand span {
+  color: #ccc;
+  font-weight: 400;
+}
+.welcome p {
+  font-size: 15px;
+}
 
 .welcome button {
   padding: 8px 20px;
@@ -268,9 +294,21 @@ body { background: #0f0f1a; color: #e0e0e0; font-family: -apple-system, BlinkMac
   font-size: 14px;
 }
 
-.recents { margin-top: 24px; text-align: left; width: 400px; }
-.recents h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #444; margin-bottom: 8px; }
-.recents ul { list-style: none; }
+.recents {
+  margin-top: 24px;
+  text-align: left;
+  width: 400px;
+}
+.recents h3 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #444;
+  margin-bottom: 8px;
+}
+.recents ul {
+  list-style: none;
+}
 .recents li {
   display: flex;
   flex-direction: column;
@@ -279,7 +317,15 @@ body { background: #0f0f1a; color: #e0e0e0; font-family: -apple-system, BlinkMac
   cursor: pointer;
   gap: 2px;
 }
-.recents li:hover { background: #1a1a2e; }
-.recents li strong { font-size: 14px; color: #ccc; }
-.recents li span { font-size: 11px; color: #555; }
+.recents li:hover {
+  background: #1a1a2e;
+}
+.recents li strong {
+  font-size: 14px;
+  color: #ccc;
+}
+.recents li span {
+  font-size: 11px;
+  color: #555;
+}
 </style>

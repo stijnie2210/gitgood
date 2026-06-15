@@ -11,9 +11,17 @@ import ConflictView from './ConflictView.vue';
 import type { Hunk } from '../../stores/staging';
 import { clampMenuPosition } from '../../composables/useContextMenu';
 import {
-  AbortMerge, ContinueRebase, AbortRebase, GetFileBase64,
-  OpenInDefaultApp, ShowInFinder, OpenInEditor,
-  StashFile, AppendToGitignore, SavePatchFile, DeleteWorkingFile,
+  AbortMerge,
+  ContinueRebase,
+  AbortRebase,
+  GetFileBase64,
+  OpenInDefaultApp,
+  ShowInFinder,
+  OpenInEditor,
+  StashFile,
+  AppendToGitignore,
+  SavePatchFile,
+  DeleteWorkingFile,
 } from '../../../wailsjs/go/main/App';
 
 const repos = useReposStore();
@@ -46,14 +54,14 @@ const startResize = makeResizer(fileListWidth, 180, 520);
 
 watch(
   () => repos.activeRepo?.path,
-  path => {
+  (path) => {
     if (path) {
       staging.load(path);
     } else {
       staging.clear();
     }
   },
-  { immediate: true },
+  { immediate: true }
 );
 
 function shortPath(p: string) {
@@ -70,7 +78,7 @@ function onSelectFile(path: string, mode: 'staged' | 'unstaged') {
   staging.selectFile(repoPath(), path, mode);
 }
 async function onStageFile(path: string) {
-  const prevIdx = staging.unstagedFiles.findIndex(f => f.path === path);
+  const prevIdx = staging.unstagedFiles.findIndex((f) => f.path === path);
   const wasSelected = staging.selectedPath === path;
   await staging.stageFile(repoPath(), path);
   if (!wasSelected) {
@@ -88,7 +96,7 @@ async function onStageFile(path: string) {
 }
 
 async function onUnstageFile(path: string) {
-  const prevIdx = staging.stagedFiles.findIndex(f => f.path === path);
+  const prevIdx = staging.stagedFiles.findIndex((f) => f.path === path);
   const wasSelected = staging.selectedPath === path;
   await staging.unstageFile(repoPath(), path);
   if (!wasSelected) {
@@ -121,10 +129,14 @@ function onUnstageHunk(hunk: Hunk) {
   }
 }
 async function onStageAll() {
-  for (const f of staging.unstagedFiles) {await staging.stageFile(repoPath(), f.path);}
+  for (const f of staging.unstagedFiles) {
+    await staging.stageFile(repoPath(), f.path);
+  }
 }
 async function onUnstageAll() {
-  for (const f of staging.stagedFiles) {await staging.unstageFile(repoPath(), f.path);}
+  for (const f of staging.stagedFiles) {
+    await staging.unstageFile(repoPath(), f.path);
+  }
 }
 
 // ── Commit panel ─────────────────────────────────────────────────────────────
@@ -133,7 +145,7 @@ const commitDescription = ref('');
 
 watch(
   () => staging.isInMerge,
-  inMerge => {
+  (inMerge) => {
     if (inMerge && staging.mergeMessage && !commitSummary.value) {
       const lines = staging.mergeMessage.trim().split('\n');
       commitSummary.value = lines[0] ?? '';
@@ -141,14 +153,12 @@ watch(
         commitDescription.value = lines.slice(2).join('\n').trim();
       }
     }
-  },
+  }
 );
 const amend = ref(false);
 const committing = ref(false);
 
-const currentBranch = computed(
-  () => branches.local.find(b => b.isCurrent)?.name ?? 'HEAD'
-);
+const currentBranch = computed(() => branches.local.find((b) => b.isCurrent)?.name ?? 'HEAD');
 
 // subject line: conventional max 72 chars
 const summaryRemaining = computed(() => 72 - commitSummary.value.length);
@@ -199,14 +209,20 @@ async function onCommit() {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  M: 'M', A: 'A', D: 'D', R: 'R', C: 'C', '?': 'U', U: '!',
+  M: 'M',
+  A: 'A',
+  D: 'D',
+  R: 'R',
+  C: 'C',
+  '?': 'U',
+  U: '!',
 };
 
 const selectedIsConflict = computed(() => {
   if (!staging.selectedPath) {
     return false;
   }
-  const f = staging.files.find(x => x.path === staging.selectedPath);
+  const f = staging.files.find((x) => x.path === staging.selectedPath);
   return f ? isConflictedFile(f) : false;
 });
 
@@ -218,14 +234,14 @@ function onSelectConflict(path: string) {
 
 // ── File context menu ─────────────────────────────────────────────────────────
 
-type FileCtxMode = 'default' | 'ignore' | 'confirm-delete'
+type FileCtxMode = 'default' | 'ignore' | 'confirm-delete';
 
 interface FileCtxMenu {
-  x: number
-  y: number
-  path: string
-  section: 'conflict' | 'unstaged' | 'staged'
-  mode: FileCtxMode
+  x: number;
+  y: number;
+  path: string;
+  section: 'conflict' | 'unstaged' | 'staged';
+  mode: FileCtxMode;
 }
 
 const fileCtxMenu = ref<FileCtxMenu | null>(null);
@@ -267,28 +283,36 @@ function fileDir(path: string): string {
 
 async function ctxStageFile() {
   const m = fileCtxMenu.value;
-  if (!m) { return; }
+  if (!m) {
+    return;
+  }
   closeFileCtxMenu();
   await onStageFile(m.path);
 }
 
 async function ctxUnstageFile() {
   const m = fileCtxMenu.value;
-  if (!m) { return; }
+  if (!m) {
+    return;
+  }
   closeFileCtxMenu();
   await onUnstageFile(m.path);
 }
 
 async function ctxDiscardFile() {
   const m = fileCtxMenu.value;
-  if (!m) { return; }
+  if (!m) {
+    return;
+  }
   closeFileCtxMenu();
   await staging.discardFile(repoPath(), m.path);
 }
 
 async function ctxStashFile() {
   const m = fileCtxMenu.value;
-  if (!m) { return; }
+  if (!m) {
+    return;
+  }
   closeFileCtxMenu();
   try {
     await StashFile(repoPath(), m.path);
@@ -301,7 +325,9 @@ async function ctxStashFile() {
 
 async function ctxIgnore(mode: 'file' | 'ext' | 'dir') {
   const m = fileCtxMenu.value;
-  if (!m) { return; }
+  if (!m) {
+    return;
+  }
   let pattern: string;
   if (mode === 'file') {
     pattern = m.path;
@@ -322,7 +348,9 @@ async function ctxIgnore(mode: 'file' | 'ext' | 'dir') {
 
 async function ctxOpenDefaultApp() {
   const m = fileCtxMenu.value;
-  if (!m) { return; }
+  if (!m) {
+    return;
+  }
   closeFileCtxMenu();
   try {
     await OpenInDefaultApp(repoPath(), m.path);
@@ -333,7 +361,9 @@ async function ctxOpenDefaultApp() {
 
 async function ctxShowInFinder() {
   const m = fileCtxMenu.value;
-  if (!m) { return; }
+  if (!m) {
+    return;
+  }
   closeFileCtxMenu();
   try {
     await ShowInFinder(repoPath(), m.path);
@@ -344,7 +374,9 @@ async function ctxShowInFinder() {
 
 async function ctxOpenInEditor() {
   const m = fileCtxMenu.value;
-  if (!m) { return; }
+  if (!m) {
+    return;
+  }
   closeFileCtxMenu();
   try {
     await OpenInEditor(repoPath(), m.path);
@@ -355,7 +387,9 @@ async function ctxOpenInEditor() {
 
 function ctxCopyPath() {
   const m = fileCtxMenu.value;
-  if (!m) { return; }
+  if (!m) {
+    return;
+  }
   closeFileCtxMenu();
   navigator.clipboard.writeText(`${repoPath()}/${m.path}`);
   toast.success('Path copied');
@@ -363,7 +397,9 @@ function ctxCopyPath() {
 
 async function ctxSavePatch() {
   const m = fileCtxMenu.value;
-  if (!m) { return; }
+  if (!m) {
+    return;
+  }
   closeFileCtxMenu();
   try {
     await SavePatchFile(repoPath(), m.path);
@@ -374,7 +410,9 @@ async function ctxSavePatch() {
 
 async function ctxDeleteFile() {
   const m = fileCtxMenu.value;
-  if (!m) { return; }
+  if (!m) {
+    return;
+  }
   if (m.mode !== 'confirm-delete') {
     fileCtxMenu.value = { ...m, mode: 'confirm-delete' };
     return;
@@ -395,12 +433,12 @@ async function ctxDeleteFile() {
 
 // ── Arrow key navigation ──────────────────────────────────────────────────────
 
-type NavEntry = { path: string; section: 'conflict' | 'unstaged' | 'staged' }
+type NavEntry = { path: string; section: 'conflict' | 'unstaged' | 'staged' };
 
 const navigableFiles = computed((): NavEntry[] => [
-  ...staging.conflictedFiles.map(f => ({ path: f.path, section: 'conflict' as const })),
-  ...staging.unstagedFiles.map(f => ({ path: f.path, section: 'unstaged' as const })),
-  ...staging.stagedFiles.map(f => ({ path: f.path, section: 'staged' as const })),
+  ...staging.conflictedFiles.map((f) => ({ path: f.path, section: 'conflict' as const })),
+  ...staging.unstagedFiles.map((f) => ({ path: f.path, section: 'unstaged' as const })),
+  ...staging.stagedFiles.map((f) => ({ path: f.path, section: 'staged' as const })),
 ]);
 
 const currentNavIndex = computed(() => {
@@ -408,10 +446,14 @@ const currentNavIndex = computed(() => {
     return -1;
   }
   if (selectedIsConflict.value) {
-    return navigableFiles.value.findIndex(f => f.path === staging.selectedPath && f.section === 'conflict');
+    return navigableFiles.value.findIndex(
+      (f) => f.path === staging.selectedPath && f.section === 'conflict'
+    );
   }
   const section = staging.selectedMode === 'staged' ? 'staged' : 'unstaged';
-  return navigableFiles.value.findIndex(f => f.path === staging.selectedPath && f.section === section);
+  return navigableFiles.value.findIndex(
+    (f) => f.path === staging.selectedPath && f.section === section
+  );
 });
 
 const fileListScrollRef = ref<HTMLElement | null>(null);
@@ -433,7 +475,9 @@ function navigateTo(delta: number) {
     onSelectFile(entry.path, entry.section);
   }
   nextTick(() => {
-    fileListScrollRef.value?.querySelector('.file-item.selected')?.scrollIntoView({ block: 'nearest' });
+    fileListScrollRef.value
+      ?.querySelector('.file-item.selected')
+      ?.scrollIntoView({ block: 'nearest' });
   });
 }
 
@@ -455,11 +499,29 @@ onUnmounted(() => document.removeEventListener('keydown', onKeyDown));
 
 // ── Image preview ─────────────────────────────────────────────────────────────
 
-const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'tiff', 'avif']);
+const IMAGE_EXTENSIONS = new Set([
+  'png',
+  'jpg',
+  'jpeg',
+  'gif',
+  'webp',
+  'svg',
+  'bmp',
+  'ico',
+  'tiff',
+  'avif',
+]);
 const IMAGE_MIME: Record<string, string> = {
-  png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif',
-  webp: 'image/webp', svg: 'image/svg+xml', bmp: 'image/bmp',
-  ico: 'image/x-icon', tiff: 'image/tiff', avif: 'image/avif',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  svg: 'image/svg+xml',
+  bmp: 'image/bmp',
+  ico: 'image/x-icon',
+  tiff: 'image/tiff',
+  avif: 'image/avif',
 };
 
 function isImageFile(path: string): boolean {
@@ -488,12 +550,12 @@ watch(
     } finally {
       imageLoading.value = false;
     }
-  },
+  }
 );
 
 async function onConflictResolved() {
   await staging.load(repoPath());
-  if (!staging.conflictedFiles.find(f => f.path === staging.selectedPath)) {
+  if (!staging.conflictedFiles.find((f) => f.path === staging.selectedPath)) {
     staging.selectedPath = null;
   }
 }
@@ -504,7 +566,11 @@ async function doAbortMerge() {
   confirmingAbort.value = false;
   try {
     await AbortMerge(repoPath());
-    await Promise.all([staging.load(repoPath()), commits.load(repoPath()), branches.load(repoPath())]);
+    await Promise.all([
+      staging.load(repoPath()),
+      commits.load(repoPath()),
+      branches.load(repoPath()),
+    ]);
     staging.selectedPath = null;
     toast.success('Merge aborted');
   } catch (e) {
@@ -517,7 +583,11 @@ const confirmingAbortRebase = ref(false);
 async function doContinueRebase() {
   try {
     await ContinueRebase(repoPath());
-    await Promise.all([staging.load(repoPath()), commits.load(repoPath()), branches.load(repoPath())]);
+    await Promise.all([
+      staging.load(repoPath()),
+      commits.load(repoPath()),
+      branches.load(repoPath()),
+    ]);
     staging.selectedPath = null;
     if (staging.isInRebase) {
       toast.success('Conflict resolved — next commit has conflicts, keep resolving');
@@ -538,7 +608,11 @@ async function doAbortRebase() {
   confirmingAbortRebase.value = false;
   try {
     await AbortRebase(repoPath());
-    await Promise.all([staging.load(repoPath()), commits.load(repoPath()), branches.load(repoPath())]);
+    await Promise.all([
+      staging.load(repoPath()),
+      commits.load(repoPath()),
+      branches.load(repoPath()),
+    ]);
     staging.selectedPath = null;
     toast.success('Rebase aborted');
   } catch (e) {
@@ -551,11 +625,17 @@ async function doAbortRebase() {
   <div class="staging-outer">
     <!-- Merge in progress banner -->
     <div v-if="staging.isInMerge" class="merge-banner">
-      <span class="merge-banner-text">⚡ Merge in progress — resolve all conflicts, then commit</span>
+      <span class="merge-banner-text"
+        >⚡ Merge in progress — resolve all conflicts, then commit</span
+      >
       <div v-if="confirmingAbort" class="merge-abort-confirm">
         <span class="merge-abort-confirm-text">Discard all resolutions?</span>
-        <button class="merge-abort-btn merge-abort-btn--confirm" @click="doAbortMerge">Yes, abort</button>
-        <button class="merge-abort-btn merge-abort-btn--cancel" @click="confirmingAbort = false">Cancel</button>
+        <button class="merge-abort-btn merge-abort-btn--confirm" @click="doAbortMerge">
+          Yes, abort
+        </button>
+        <button class="merge-abort-btn merge-abort-btn--cancel" @click="confirmingAbort = false">
+          Cancel
+        </button>
       </div>
       <button v-else class="merge-abort-btn" @click="confirmingAbort = true">Abort Merge</button>
     </div>
@@ -567,25 +647,39 @@ async function doAbortRebase() {
         <span v-if="staging.rebaseState.total" class="rebase-step">
           {{ staging.rebaseState.step }}/{{ staging.rebaseState.total }}
         </span>
-        <span v-if="staging.rebaseState.onto" class="rebase-onto">onto {{ staging.rebaseState.onto }}</span>
-        <span v-if="staging.rebaseState.message" class="rebase-msg">{{ staging.rebaseState.message }}</span>
+        <span v-if="staging.rebaseState.onto" class="rebase-onto"
+          >onto {{ staging.rebaseState.onto }}</span
+        >
+        <span v-if="staging.rebaseState.message" class="rebase-msg">{{
+          staging.rebaseState.message
+        }}</span>
       </div>
       <div v-if="confirmingAbortRebase" class="merge-abort-confirm">
         <span class="merge-abort-confirm-text">Discard all rebase progress?</span>
-        <button class="merge-abort-btn merge-abort-btn--confirm" @click="doAbortRebase">Yes, abort</button>
-        <button class="merge-abort-btn merge-abort-btn--cancel" @click="confirmingAbortRebase = false">Cancel</button>
+        <button class="merge-abort-btn merge-abort-btn--confirm" @click="doAbortRebase">
+          Yes, abort
+        </button>
+        <button
+          class="merge-abort-btn merge-abort-btn--cancel"
+          @click="confirmingAbortRebase = false"
+        >
+          Cancel
+        </button>
       </div>
-      <button v-else class="merge-abort-btn" @click="confirmingAbortRebase = true">Abort Rebase</button>
+      <button v-else class="merge-abort-btn" @click="confirmingAbortRebase = true">
+        Abort Rebase
+      </button>
     </div>
 
     <div class="staging-view">
       <!-- File list panel (fixed width, has its own scroll + commit panel) -->
       <div class="file-panel" :style="{ width: fileListWidth + 'px' }">
-
         <!-- Scrollable file list area -->
         <div ref="fileListScrollRef" class="file-list-scroll">
           <div class="staging-toolbar">
-            <button class="toolbar-btn" title="Refresh status" @click="staging.load(repoPath())">⟳ Refresh</button>
+            <button class="toolbar-btn" title="Refresh status" @click="staging.load(repoPath())">
+              ⟳ Refresh
+            </button>
           </div>
 
           <div v-if="staging.loading" class="list-loading">Loading…</div>
@@ -620,7 +714,9 @@ async function doAbortRebase() {
               v-for="file in staging.unstagedFiles"
               :key="file.path"
               class="file-item"
-              :class="{ selected: staging.selectedPath === file.path && staging.selectedMode === 'unstaged' }"
+              :class="{
+                selected: staging.selectedPath === file.path && staging.selectedMode === 'unstaged',
+              }"
               @click="onSelectFile(file.path, 'unstaged')"
               @contextmenu="openFileCtxMenu($event, file.path, 'unstaged')"
             >
@@ -628,7 +724,13 @@ async function doAbortRebase() {
                 {{ STATUS_LABELS[file.unstaged] ?? file.unstaged }}
               </span>
               <span class="file-name" :title="file.path">{{ shortPath(file.path) }}</span>
-              <button class="inline-btn stage-inline" title="Stage file" @click.stop="onStageFile(file.path)">+</button>
+              <button
+                class="inline-btn stage-inline"
+                title="Stage file"
+                @click.stop="onStageFile(file.path)"
+              >
+                +
+              </button>
             </div>
 
             <!-- Staged section -->
@@ -643,7 +745,9 @@ async function doAbortRebase() {
               v-for="file in staging.stagedFiles"
               :key="file.path + ':staged'"
               class="file-item"
-              :class="{ selected: staging.selectedPath === file.path && staging.selectedMode === 'staged' }"
+              :class="{
+                selected: staging.selectedPath === file.path && staging.selectedMode === 'staged',
+              }"
               @click="onSelectFile(file.path, 'staged')"
               @contextmenu="openFileCtxMenu($event, file.path, 'staged')"
             >
@@ -651,7 +755,13 @@ async function doAbortRebase() {
                 {{ STATUS_LABELS[file.staged] ?? file.staged }}
               </span>
               <span class="file-name" :title="file.path">{{ shortPath(file.path) }}</span>
-              <button class="inline-btn unstage-inline" title="Unstage file" @click.stop="onUnstageFile(file.path)">−</button>
+              <button
+                class="inline-btn unstage-inline"
+                title="Unstage file"
+                @click.stop="onUnstageFile(file.path)"
+              >
+                −
+              </button>
             </div>
           </template>
         </div>
@@ -660,13 +770,17 @@ async function doAbortRebase() {
         <div class="commit-panel">
           <!-- During rebase: show Continue button instead of normal commit form -->
           <template v-if="staging.isInRebase">
-            <div class="rebase-action-hint">Resolve all conflicts above, then continue the rebase.</div>
+            <div class="rebase-action-hint">
+              Resolve all conflicts above, then continue the rebase.
+            </div>
             <button
               class="commit-btn rebase-continue-btn"
               :disabled="staging.conflictedFiles.length > 0"
               @click="doContinueRebase"
             >
-              <span v-if="staging.conflictedFiles.length > 0">Resolve {{ staging.conflictedFiles.length }} conflict(s) first</span>
+              <span v-if="staging.conflictedFiles.length > 0"
+                >Resolve {{ staging.conflictedFiles.length }} conflict(s) first</span
+              >
               <span v-else>↪ Continue Rebase</span>
             </button>
           </template>
@@ -685,7 +799,13 @@ async function doAbortRebase() {
                 rows="2"
                 maxlength="200"
               />
-              <span class="char-count" :class="{ over: summaryRemaining < 0, warn: summaryRemaining < 10 && summaryRemaining >= 0 }">
+              <span
+                class="char-count"
+                :class="{
+                  over: summaryRemaining < 0,
+                  warn: summaryRemaining < 10 && summaryRemaining >= 0,
+                }"
+              >
                 {{ summaryRemaining }}
               </span>
             </div>
@@ -763,17 +883,25 @@ async function doAbortRebase() {
       <template v-if="fileCtxMenu.mode === 'default'">
         <!-- Unstaged-only actions -->
         <template v-if="fileCtxMenu.section === 'unstaged'">
-          <button class="ctx-menu-item ctx-menu-item-primary" @click="ctxStageFile">Stage file</button>
-          <button class="ctx-menu-item ctx-menu-item-danger" @click="ctxDiscardFile">Discard changes</button>
+          <button class="ctx-menu-item ctx-menu-item-primary" @click="ctxStageFile">
+            Stage file
+          </button>
+          <button class="ctx-menu-item ctx-menu-item-danger" @click="ctxDiscardFile">
+            Discard changes
+          </button>
           <div class="ctx-menu-divider" />
-          <button class="ctx-menu-item" @click="fileCtxMenu!.mode = 'ignore'">Ignore <span style="float:right;opacity:.5">▸</span></button>
+          <button class="ctx-menu-item" @click="fileCtxMenu!.mode = 'ignore'">
+            Ignore <span style="float: right; opacity: 0.5">▸</span>
+          </button>
           <button class="ctx-menu-item" @click="ctxStashFile">Stash file</button>
           <div class="ctx-menu-divider" />
         </template>
 
         <!-- Staged-only actions -->
         <template v-else-if="fileCtxMenu.section === 'staged'">
-          <button class="ctx-menu-item ctx-menu-item-primary" @click="ctxUnstageFile">Unstage file</button>
+          <button class="ctx-menu-item ctx-menu-item-primary" @click="ctxUnstageFile">
+            Unstage file
+          </button>
           <div class="ctx-menu-divider" />
         </template>
 
@@ -783,12 +911,20 @@ async function doAbortRebase() {
         <button class="ctx-menu-item" @click="ctxOpenInEditor">Open in editor</button>
         <div class="ctx-menu-divider" />
         <button class="ctx-menu-item" @click="ctxCopyPath">Copy path</button>
-        <button v-if="fileCtxMenu.section !== 'conflict'" class="ctx-menu-item" @click="ctxSavePatch">Save patch…</button>
+        <button
+          v-if="fileCtxMenu.section !== 'conflict'"
+          class="ctx-menu-item"
+          @click="ctxSavePatch"
+        >
+          Save patch…
+        </button>
 
         <!-- Unstaged: delete -->
         <template v-if="fileCtxMenu.section === 'unstaged'">
           <div class="ctx-menu-divider" />
-          <button class="ctx-menu-item ctx-menu-item-danger" @click="ctxDeleteFile">Delete file</button>
+          <button class="ctx-menu-item ctx-menu-item-danger" @click="ctxDeleteFile">
+            Delete file
+          </button>
         </template>
       </template>
 
@@ -797,10 +933,18 @@ async function doAbortRebase() {
         <button class="ctx-menu-item" @click="fileCtxMenu!.mode = 'default'">← Back</button>
         <div class="ctx-menu-divider" />
         <button class="ctx-menu-item" @click="ctxIgnore('file')">Ignore this file</button>
-        <button class="ctx-menu-item" :disabled="!fileExt(fileCtxMenu.path)" @click="ctxIgnore('ext')">
+        <button
+          class="ctx-menu-item"
+          :disabled="!fileExt(fileCtxMenu.path)"
+          @click="ctxIgnore('ext')"
+        >
           Ignore all *.{{ fileExt(fileCtxMenu.path) }} files
         </button>
-        <button class="ctx-menu-item" :disabled="!fileDir(fileCtxMenu.path)" @click="ctxIgnore('dir')">
+        <button
+          class="ctx-menu-item"
+          :disabled="!fileDir(fileCtxMenu.path)"
+          @click="ctxIgnore('dir')"
+        >
           Ignore containing folder
         </button>
       </template>
@@ -808,8 +952,12 @@ async function doAbortRebase() {
       <!-- Delete confirm -->
       <template v-else-if="fileCtxMenu.mode === 'confirm-delete'">
         <div class="ctx-menu-confirm">
-          <p class="ctx-menu-confirm-text">Delete "{{ fileCtxMenu.path.split('/').pop() }}" from disk?</p>
-          <button class="ctx-menu-item ctx-menu-item-danger" @click="ctxDeleteFile">Yes, delete</button>
+          <p class="ctx-menu-confirm-text">
+            Delete "{{ fileCtxMenu.path.split('/').pop() }}" from disk?
+          </p>
+          <button class="ctx-menu-item ctx-menu-item-danger" @click="ctxDeleteFile">
+            Yes, delete
+          </button>
           <button class="ctx-menu-item" @click="closeFileCtxMenu">Cancel</button>
         </div>
       </template>
@@ -862,11 +1010,29 @@ async function doAbortRebase() {
   font-size: 11px;
   cursor: pointer;
 }
-.merge-abort-btn:hover { background: #381e1e; color: #f09090; }
-.merge-abort-btn--confirm { background: #3a1818; border-color: #6a2020; color: #f08080; }
-.merge-abort-btn--confirm:hover { background: #4a1c1c; color: #f0a0a0; }
-.merge-abort-btn--cancel { background: transparent; border-color: #2a2a44; color: #556; margin-left: 2px; }
-.merge-abort-btn--cancel:hover { border-color: #3a3a60; color: #778; }
+.merge-abort-btn:hover {
+  background: #381e1e;
+  color: #f09090;
+}
+.merge-abort-btn--confirm {
+  background: #3a1818;
+  border-color: #6a2020;
+  color: #f08080;
+}
+.merge-abort-btn--confirm:hover {
+  background: #4a1c1c;
+  color: #f0a0a0;
+}
+.merge-abort-btn--cancel {
+  background: transparent;
+  border-color: #2a2a44;
+  color: #556;
+  margin-left: 2px;
+}
+.merge-abort-btn--cancel:hover {
+  border-color: #3a3a60;
+  color: #778;
+}
 
 /* Rebase banner */
 .rebase-banner {
@@ -928,8 +1094,15 @@ async function doAbortRebase() {
   color: #4f8ef7 !important;
   border: 1px solid #1a3a6a !important;
 }
-.rebase-continue-btn:hover:not(:disabled) { background: #132848 !important; }
-.rebase-continue-btn:disabled { cursor: default; color: #556 !important; border-color: #252540 !important; background: #1a1a30 !important; }
+.rebase-continue-btn:hover:not(:disabled) {
+  background: #132848 !important;
+}
+.rebase-continue-btn:disabled {
+  cursor: default;
+  color: #556 !important;
+  border-color: #252540 !important;
+  background: #1a1a30 !important;
+}
 
 .staging-view {
   flex: 1;
@@ -973,7 +1146,9 @@ async function doAbortRebase() {
   font-size: 11px;
   cursor: pointer;
 }
-.toolbar-btn:hover { background: #243466; }
+.toolbar-btn:hover {
+  background: #243466;
+}
 
 .list-loading {
   padding: 16px;
@@ -994,7 +1169,11 @@ async function doAbortRebase() {
   color: #778;
   flex-shrink: 0;
 }
-.staged-header { margin-top: 4px; border-top: 1px solid #1e1e36; padding-top: 8px; }
+.staged-header {
+  margin-top: 4px;
+  border-top: 1px solid #1e1e36;
+  padding-top: 8px;
+}
 
 .section-btn {
   font-size: 10px;
@@ -1005,7 +1184,10 @@ async function doAbortRebase() {
   color: #889;
   cursor: pointer;
 }
-.section-btn:hover { border-color: #667; color: #aab; }
+.section-btn:hover {
+  border-color: #667;
+  color: #aab;
+}
 
 .empty-section {
   padding: 4px 12px 6px;
@@ -1023,8 +1205,12 @@ async function doAbortRebase() {
   cursor: pointer;
   min-width: 0;
 }
-.file-item:hover { background: #1e2d50; }
-.file-item.selected { background: #1e2d54; }
+.file-item:hover {
+  background: #1e2d50;
+}
+.file-item.selected {
+  background: #1e2d54;
+}
 
 .status-code {
   font-size: 10px;
@@ -1034,18 +1220,38 @@ async function doAbortRebase() {
   text-align: center;
   flex-shrink: 0;
 }
-.sc-M { color: #f0a050; }
-.sc-A { color: #4ff7a0; }
-.sc-D { color: #f74f4f; }
-.sc-R { color: #7aadff; }
-.sc-q { color: #5af0f0; }
-.sc-conflict { color: #f07070; }
+.sc-M {
+  color: #f0a050;
+}
+.sc-A {
+  color: #4ff7a0;
+}
+.sc-D {
+  color: #f74f4f;
+}
+.sc-R {
+  color: #7aadff;
+}
+.sc-q {
+  color: #5af0f0;
+}
+.sc-conflict {
+  color: #f07070;
+}
 
-.conflict-header-section { color: #c06060; }
+.conflict-header-section {
+  color: #c06060;
+}
 
-.file-item--conflict .file-name { color: #f07070; }
-.file-item--conflict.selected .file-name { color: #f09090; }
-.file-item--conflict:hover { background: #2a1818; }
+.file-item--conflict .file-name {
+  color: #f07070;
+}
+.file-item--conflict.selected .file-name {
+  color: #f09090;
+}
+.file-item--conflict:hover {
+  background: #2a1818;
+}
 
 .file-name {
   flex: 1;
@@ -1056,7 +1262,9 @@ async function doAbortRebase() {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.file-item.selected .file-name { color: #dde; }
+.file-item.selected .file-name {
+  color: #dde;
+}
 
 .inline-btn {
   flex-shrink: 0;
@@ -1073,11 +1281,23 @@ async function doAbortRebase() {
   opacity: 0;
   transition: opacity 0.1s;
 }
-.file-item:hover .inline-btn { opacity: 1; }
-.stage-inline   { background: rgba(79,247,160,0.15); color: #4ff7a0; }
-.stage-inline:hover   { background: rgba(79,247,160,0.30); }
-.unstage-inline { background: rgba(247,79,79,0.15); color: #f74f4f; }
-.unstage-inline:hover { background: rgba(247,79,79,0.30); }
+.file-item:hover .inline-btn {
+  opacity: 1;
+}
+.stage-inline {
+  background: rgba(79, 247, 160, 0.15);
+  color: #4ff7a0;
+}
+.stage-inline:hover {
+  background: rgba(79, 247, 160, 0.3);
+}
+.unstage-inline {
+  background: rgba(247, 79, 79, 0.15);
+  color: #f74f4f;
+}
+.unstage-inline:hover {
+  background: rgba(247, 79, 79, 0.3);
+}
 
 /* ── Commit panel ─────────────────────────── */
 .commit-panel {
@@ -1100,8 +1320,13 @@ async function doAbortRebase() {
   user-select: none;
   padding: 0 2px;
 }
-.amend-row input[type=checkbox] { accent-color: #4f8ef7; cursor: pointer; }
-.amend-row:hover span { color: #bbccdd; }
+.amend-row input[type='checkbox'] {
+  accent-color: #4f8ef7;
+  cursor: pointer;
+}
+.amend-row:hover span {
+  color: #bbccdd;
+}
 
 .summary-row {
   position: relative;
@@ -1121,8 +1346,12 @@ async function doAbortRebase() {
   line-height: 1.4;
   box-sizing: border-box;
 }
-.summary-input:focus { border-color: #4f8ef7; }
-.summary-input::placeholder { color: #556; }
+.summary-input:focus {
+  border-color: #4f8ef7;
+}
+.summary-input::placeholder {
+  color: #556;
+}
 
 .char-count {
   position: absolute;
@@ -1132,8 +1361,12 @@ async function doAbortRebase() {
   color: #667;
   pointer-events: none;
 }
-.char-count.warn { color: #f0a050; }
-.char-count.over { color: #f74f4f; }
+.char-count.warn {
+  color: #f0a050;
+}
+.char-count.over {
+  color: #f74f4f;
+}
 
 .desc-input {
   width: 100%;
@@ -1149,8 +1382,12 @@ async function doAbortRebase() {
   line-height: 1.4;
   box-sizing: border-box;
 }
-.desc-input:focus { border-color: #3a3a60; }
-.desc-input::placeholder { color: #4a4a66; }
+.desc-input:focus {
+  border-color: #3a3a60;
+}
+.desc-input::placeholder {
+  color: #4a4a66;
+}
 
 .commit-btn {
   width: 100%;
@@ -1164,14 +1401,20 @@ async function doAbortRebase() {
   background: #1a1a30;
   color: #778;
 }
-.commit-btn:disabled { cursor: default; }
+.commit-btn:disabled {
+  cursor: default;
+}
 .commit-btn.ready {
   background: #1e3d28;
   color: #4ff7a0;
   border: 1px solid #2a5a38;
 }
-.commit-btn.ready:hover { background: #254830; }
-.commit-btn strong { font-weight: 700; }
+.commit-btn.ready:hover {
+  background: #254830;
+}
+.commit-btn strong {
+  font-weight: 700;
+}
 
 /* Resize handle */
 .resize-handle {
@@ -1181,7 +1424,9 @@ async function doAbortRebase() {
   cursor: col-resize;
   transition: background 0.15s;
 }
-.resize-handle:hover { background: #4f8ef7; }
+.resize-handle:hover {
+  background: #4f8ef7;
+}
 
 /* Diff panel */
 .diff-panel {
@@ -1248,6 +1493,6 @@ async function doAbortRebase() {
   max-height: 100%;
   object-fit: contain;
   border-radius: 4px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
 }
 </style>

@@ -49,7 +49,7 @@ const toast = useToastStore();
   max-width: 340px;
   cursor: pointer;
   pointer-events: all;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
   user-select: none;
 }
 
@@ -84,9 +84,25 @@ const toast = useToastStore();
 }
 
 /* Transitions */
-.toast-enter-active { transition: transform 0.2s ease, opacity 0.2s ease; }
-.toast-leave-active { transition: transform 0.18s ease, opacity 0.18s ease; }
-.toast-enter-from  { transform: translateX(20px); opacity: 0; }
-.toast-leave-to    { transform: translateX(20px); opacity: 0; }
-.toast-move        { transition: transform 0.2s ease; }
+.toast-enter-active {
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+.toast-leave-active {
+  transition:
+    transform 0.18s ease,
+    opacity 0.18s ease;
+}
+.toast-enter-from {
+  transform: translateX(20px);
+  opacity: 0;
+}
+.toast-leave-to {
+  transform: translateX(20px);
+  opacity: 0;
+}
+.toast-move {
+  transition: transform 0.2s ease;
+}
 </style>

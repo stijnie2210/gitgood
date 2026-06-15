@@ -3,7 +3,7 @@ export function clampMenuPosition(
   el: HTMLElement,
   x: number,
   y: number,
-  padding = 8,
+  padding = 8
 ): { x: number; y: number } {
   const { width, height } = el.getBoundingClientRect();
   const vw = window.innerWidth;

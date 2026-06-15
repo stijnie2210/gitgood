@@ -3,18 +3,18 @@ import { computed } from 'vue';
 import type { FileDiff, Hunk } from '../../stores/staging';
 
 const props = defineProps<{
-  diffs: FileDiff[]
-  mode: 'stage' | 'unstage'
-  path: string
-  diffLoading: boolean
+  diffs: FileDiff[];
+  mode: 'stage' | 'unstage';
+  path: string;
+  diffLoading: boolean;
 }>();
 
 const emit = defineEmits<{
-  'stage-file': []
-  'unstage-file': []
-  'discard-file': []
-  'stage-hunk': [hunk: Hunk]
-  'unstage-hunk': [hunk: Hunk]
+  'stage-file': [];
+  'unstage-file': [];
+  'discard-file': [];
+  'stage-hunk': [hunk: Hunk];
+  'unstage-hunk': [hunk: Hunk];
 }>();
 
 // Flatten hunks across all FileDiffs (usually just one for a single file)
@@ -28,7 +28,7 @@ const flatHunks = computed(() => {
   return result;
 });
 
-const isBinary = computed(() => props.diffs.some(d => d.isBinary));
+const isBinary = computed(() => props.diffs.some((d) => d.isBinary));
 </script>
 
 <template>
@@ -40,10 +40,18 @@ const isBinary = computed(() => props.diffs.some(d => d.isBinary));
         <button v-if="mode === 'stage'" class="action-btn stage-btn" @click="emit('stage-file')">
           Stage File
         </button>
-        <button v-if="mode === 'stage'" class="action-btn discard-btn" @click="emit('discard-file')">
+        <button
+          v-if="mode === 'stage'"
+          class="action-btn discard-btn"
+          @click="emit('discard-file')"
+        >
           Discard
         </button>
-        <button v-if="mode === 'unstage'" class="action-btn unstage-btn" @click="emit('unstage-file')">
+        <button
+          v-if="mode === 'unstage'"
+          class="action-btn unstage-btn"
+          @click="emit('unstage-file')"
+        >
           Unstage File
         </button>
       </div>
@@ -67,12 +75,12 @@ const isBinary = computed(() => props.diffs.some(d => d.isBinary));
             v-if="mode === 'stage'"
             class="hunk-btn stage-btn"
             @click="emit('stage-hunk', hunk)"
-          >Stage Hunk</button>
-          <button
-            v-else
-            class="hunk-btn unstage-btn"
-            @click="emit('unstage-hunk', hunk)"
-          >Unstage Hunk</button>
+          >
+            Stage Hunk
+          </button>
+          <button v-else class="hunk-btn unstage-btn" @click="emit('unstage-hunk', hunk)">
+            Unstage Hunk
+          </button>
         </div>
         <div
           v-for="(line, li) in hunk.lines"
@@ -80,7 +88,9 @@ const isBinary = computed(() => props.diffs.some(d => d.isBinary));
           class="diff-line"
           :class="`diff-line--${line.type}`"
         >
-          <span class="diff-gutter">{{ line.type === 'add' ? '+' : line.type === 'del' ? '−' : ' ' }}</span>
+          <span class="diff-gutter">{{
+            line.type === 'add' ? '+' : line.type === 'del' ? '−' : ' '
+          }}</span>
           <span class="diff-lineno old">{{ line.oldLine || '' }}</span>
           <span class="diff-lineno new">{{ line.newLine || '' }}</span>
           <span class="diff-content">{{ line.content }}</span>
@@ -136,12 +146,30 @@ const isBinary = computed(() => props.diffs.some(d => d.isBinary));
   font-weight: 500;
 }
 
-.action-btn.stage-btn  { background: rgba(79,247,160,0.12); border-color: #3a8a60; color: #4ff7a0; }
-.action-btn.stage-btn:hover  { background: rgba(79,247,160,0.22); }
-.action-btn.unstage-btn { background: rgba(79,140,247,0.12); border-color: #3a5e8a; color: #7aadff; }
-.action-btn.unstage-btn:hover { background: rgba(79,140,247,0.22); }
-.action-btn.discard-btn { background: rgba(247,79,79,0.1); border-color: #7a3a3a; color: #f79090; }
-.action-btn.discard-btn:hover { background: rgba(247,79,79,0.2); }
+.action-btn.stage-btn {
+  background: rgba(79, 247, 160, 0.12);
+  border-color: #3a8a60;
+  color: #4ff7a0;
+}
+.action-btn.stage-btn:hover {
+  background: rgba(79, 247, 160, 0.22);
+}
+.action-btn.unstage-btn {
+  background: rgba(79, 140, 247, 0.12);
+  border-color: #3a5e8a;
+  color: #7aadff;
+}
+.action-btn.unstage-btn:hover {
+  background: rgba(79, 140, 247, 0.22);
+}
+.action-btn.discard-btn {
+  background: rgba(247, 79, 79, 0.1);
+  border-color: #7a3a3a;
+  color: #f79090;
+}
+.action-btn.discard-btn:hover {
+  background: rgba(247, 79, 79, 0.2);
+}
 
 .hunk-loading,
 .hunk-empty {
@@ -186,10 +214,22 @@ const isBinary = computed(() => props.diffs.some(d => d.isBinary));
   flex-shrink: 0;
   font-weight: 500;
 }
-.hunk-btn.stage-btn   { background: rgba(79,247,160,0.08); border-color: #2a6040; color: #4ff7a0; }
-.hunk-btn.stage-btn:hover   { background: rgba(79,247,160,0.18); }
-.hunk-btn.unstage-btn { background: rgba(79,140,247,0.08); border-color: #2a4060; color: #7aadff; }
-.hunk-btn.unstage-btn:hover { background: rgba(79,140,247,0.18); }
+.hunk-btn.stage-btn {
+  background: rgba(79, 247, 160, 0.08);
+  border-color: #2a6040;
+  color: #4ff7a0;
+}
+.hunk-btn.stage-btn:hover {
+  background: rgba(79, 247, 160, 0.18);
+}
+.hunk-btn.unstage-btn {
+  background: rgba(79, 140, 247, 0.08);
+  border-color: #2a4060;
+  color: #7aadff;
+}
+.hunk-btn.unstage-btn:hover {
+  background: rgba(79, 140, 247, 0.18);
+}
 
 .diff-line {
   display: flex;
@@ -198,13 +238,29 @@ const isBinary = computed(() => props.diffs.some(d => d.isBinary));
   line-height: 18px;
   white-space: pre;
 }
-.diff-line--add     { background: rgba(79,247,160,0.06); }
-.diff-line--del     { background: rgba(247,79,79,0.08); }
-.diff-line--context { color: #7788aa; }
+.diff-line--add {
+  background: rgba(79, 247, 160, 0.06);
+}
+.diff-line--del {
+  background: rgba(247, 79, 79, 0.08);
+}
+.diff-line--context {
+  color: #7788aa;
+}
 
-.diff-gutter { width: 14px; text-align: center; flex-shrink: 0; color: #4a5570; user-select: none; }
-.diff-line--add .diff-gutter { color: #4ff7a0; }
-.diff-line--del .diff-gutter { color: #f74f4f; }
+.diff-gutter {
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+  color: #4a5570;
+  user-select: none;
+}
+.diff-line--add .diff-gutter {
+  color: #4ff7a0;
+}
+.diff-line--del .diff-gutter {
+  color: #f74f4f;
+}
 
 .diff-lineno {
   width: 36px;
@@ -216,10 +272,21 @@ const isBinary = computed(() => props.diffs.some(d => d.isBinary));
   font-size: 10px;
   line-height: 18px;
 }
-.diff-line--add .diff-lineno.old { color: transparent; }
-.diff-line--del .diff-lineno.new { color: transparent; }
+.diff-line--add .diff-lineno.old {
+  color: transparent;
+}
+.diff-line--del .diff-lineno.new {
+  color: transparent;
+}
 
-.diff-content { padding-left: 6px; color: #ccc; }
-.diff-line--add .diff-content { color: #9effd0; }
-.diff-line--del .diff-content { color: #ff9090; }
+.diff-content {
+  padding-left: 6px;
+  color: #ccc;
+}
+.diff-line--add .diff-content {
+  color: #9effd0;
+}
+.diff-line--del .diff-content {
+  color: #ff9090;
+}
 </style>

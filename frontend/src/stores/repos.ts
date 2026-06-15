@@ -10,8 +10,8 @@ import {
 } from '../../wailsjs/go/main/App';
 
 export interface RepoTab {
-  path: string
-  name: string
+  path: string;
+  name: string;
 }
 
 export const useReposStore = defineStore('repos', () => {
@@ -26,7 +26,10 @@ export const useReposStore = defineStore('repos', () => {
   }
 
   function persistSession() {
-    SaveSession(tabs.value.map(t => ({ path: t.path, name: t.name })), activeIndex.value);
+    SaveSession(
+      tabs.value.map((t) => ({ path: t.path, name: t.name })),
+      activeIndex.value
+    );
   }
 
   async function restoreSession() {
@@ -39,7 +42,7 @@ export const useReposStore = defineStore('repos', () => {
     for (const tab of session.tabs) {
       try {
         await OpenRepository(tab.path);
-        if (!tabs.value.find(t => t.path === tab.path)) {
+        if (!tabs.value.find((t) => t.path === tab.path)) {
           tabs.value.push({ path: tab.path, name: tab.name });
         }
       } catch {
@@ -54,7 +57,7 @@ export const useReposStore = defineStore('repos', () => {
   async function openRepo(path: string) {
     await OpenRepository(path);
     const name = path.split('/').pop() ?? path;
-    const existing = tabs.value.findIndex(t => t.path === path);
+    const existing = tabs.value.findIndex((t) => t.path === path);
     if (existing >= 0) {
       activeIndex.value = existing;
     } else {
@@ -89,7 +92,15 @@ export const useReposStore = defineStore('repos', () => {
   }
 
   return {
-    tabs, activeIndex, activeRepo, recentRepos,
-    loadRecents, restoreSession, openRepo, pickAndOpen, closeTab, setActive,
+    tabs,
+    activeIndex,
+    activeRepo,
+    recentRepos,
+    loadRecents,
+    restoreSession,
+    openRepo,
+    pickAndOpen,
+    closeTab,
+    setActive,
   };
 });

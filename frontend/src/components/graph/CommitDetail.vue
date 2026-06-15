@@ -7,16 +7,19 @@ import { GetFileAtCommitBase64 } from '../../../wailsjs/go/main/App';
 const commits = useCommitsStore();
 const repos = useReposStore();
 
-const selectedRow = computed(() =>
-  commits.rows.find(r => r.hash === commits.selectedHash) ?? null
+const selectedRow = computed(
+  () => commits.rows.find((r) => r.hash === commits.selectedHash) ?? null
 );
 
 const collapsed = ref<Set<number>>(new Set());
 
 function toggle(i: number) {
   const s = new Set(collapsed.value);
-  if (s.has(i)) {s.delete(i);}
-  else {s.add(i);}
+  if (s.has(i)) {
+    s.delete(i);
+  } else {
+    s.add(i);
+  }
   collapsed.value = s;
 }
 
@@ -30,11 +33,29 @@ watchEffect(() => {
 
 // ── Image preview ─────────────────────────────────────────────────────────────
 
-const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'tiff', 'avif']);
+const IMAGE_EXTENSIONS = new Set([
+  'png',
+  'jpg',
+  'jpeg',
+  'gif',
+  'webp',
+  'svg',
+  'bmp',
+  'ico',
+  'tiff',
+  'avif',
+]);
 const IMAGE_MIME: Record<string, string> = {
-  png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif',
-  webp: 'image/webp', svg: 'image/svg+xml', bmp: 'image/bmp',
-  ico: 'image/x-icon', tiff: 'image/tiff', avif: 'image/avif',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  svg: 'image/svg+xml',
+  bmp: 'image/bmp',
+  ico: 'image/x-icon',
+  tiff: 'image/tiff',
+  avif: 'image/avif',
 };
 
 function isImageFile(path: string): boolean {
@@ -79,7 +100,7 @@ watch(
         imageLoadingPaths.value = loading2;
       }
     }
-  },
+  }
 );
 </script>
 
@@ -94,7 +115,8 @@ watch(
           :key="l.name"
           class="label"
           :class="`label--${l.type}`"
-        >{{ l.type === 'remote' ? `${l.remote}/${l.name}` : l.name }}</span>
+          >{{ l.type === 'remote' ? `${l.remote}/${l.name}` : l.name }}</span
+        >
       </div>
       <div class="meta-subject">{{ selectedRow.subject }}</div>
       <div class="meta-info">
@@ -113,13 +135,29 @@ watch(
         <button class="file-header" @click="toggle(fi)">
           <span class="collapse-icon">{{ collapsed.has(fi) ? '▶' : '▼' }}</span>
           <span class="file-status">
-            {{ !file.oldPath ? '+' : !file.newPath || file.newPath === file.oldPath ? (file.hunks.length ? '~' : '') : '→' }}
+            {{
+              !file.oldPath
+                ? '+'
+                : !file.newPath || file.newPath === file.oldPath
+                  ? file.hunks.length
+                    ? '~'
+                    : ''
+                  : '→'
+            }}
           </span>
           <span class="file-path">{{ file.newPath || file.oldPath }}</span>
           <span v-if="file.isBinary" class="file-badge">binary</span>
           <span class="file-stats">
-            <span class="stat-add">+{{ file.hunks.flatMap(h => h.lines).filter(l => l.type === 'add').length }}</span>
-            <span class="stat-del">−{{ file.hunks.flatMap(h => h.lines).filter(l => l.type === 'del').length }}</span>
+            <span class="stat-add"
+              >+{{
+                file.hunks.flatMap((h) => h.lines).filter((l) => l.type === 'add').length
+              }}</span
+            >
+            <span class="stat-del"
+              >−{{
+                file.hunks.flatMap((h) => h.lines).filter((l) => l.type === 'del').length
+              }}</span
+            >
           </span>
         </button>
 
@@ -127,8 +165,16 @@ watch(
         <template v-if="!collapsed.has(fi)">
           <template v-if="file.isBinary">
             <template v-if="isImageFile(file.newPath || file.oldPath || '')">
-              <div v-if="imageLoadingPaths.has(file.newPath || file.oldPath || '')" class="binary-notice">Loading…</div>
-              <div v-else-if="imageCache.get(file.newPath || file.oldPath || '')" class="image-preview-container">
+              <div
+                v-if="imageLoadingPaths.has(file.newPath || file.oldPath || '')"
+                class="binary-notice"
+              >
+                Loading…
+              </div>
+              <div
+                v-else-if="imageCache.get(file.newPath || file.oldPath || '')"
+                class="image-preview-container"
+              >
                 <img
                   :src="imageCache.get(file.newPath || file.oldPath || '')!"
                   class="image-preview-img"
@@ -148,7 +194,9 @@ watch(
               class="diff-line"
               :class="`diff-line--${line.type}`"
             >
-              <span class="diff-gutter">{{ line.type === 'add' ? '+' : line.type === 'del' ? '−' : ' ' }}</span>
+              <span class="diff-gutter">{{
+                line.type === 'add' ? '+' : line.type === 'del' ? '−' : ' '
+              }}</span>
               <span class="diff-lineno old">{{ line.oldLine || '' }}</span>
               <span class="diff-lineno new">{{ line.newLine || '' }}</span>
               <span class="diff-content">{{ line.content }}</span>
@@ -178,24 +226,74 @@ watch(
   flex-shrink: 0;
 }
 
-.meta-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 5px; }
+.meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 5px;
+}
 
-.meta-hash { font-family: monospace; font-size: 11px; color: #555; }
+.meta-hash {
+  font-family: monospace;
+  font-size: 11px;
+  color: #555;
+}
 
-.label { padding: 1px 5px; border-radius: 3px; font-size: 10px; font-weight: 500; }
-.label--head   { background: #4f8ef7; color: #fff; }
-.label--branch { background: #2a3a5e; color: #7aadff; border: 1px solid #3a5080; }
-.label--remote { background: #2a4a3a; color: #7affb8; border: 1px solid #3a6050; }
-.label--tag    { background: #4a3a20; color: #ffcc66; border: 1px solid #6a5030; }
+.label {
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 500;
+}
+.label--head {
+  background: #4f8ef7;
+  color: #fff;
+}
+.label--branch {
+  background: #2a3a5e;
+  color: #7aadff;
+  border: 1px solid #3a5080;
+}
+.label--remote {
+  background: #2a4a3a;
+  color: #7affb8;
+  border: 1px solid #3a6050;
+}
+.label--tag {
+  background: #4a3a20;
+  color: #ffcc66;
+  border: 1px solid #6a5030;
+}
 
-.meta-subject { font-size: 13px; color: #e0e0e0; font-weight: 500; margin-bottom: 3px; }
-.meta-info { display: flex; gap: 12px; color: #666; font-size: 11px; }
+.meta-subject {
+  font-size: 13px;
+  color: #e0e0e0;
+  font-weight: 500;
+  margin-bottom: 3px;
+}
+.meta-info {
+  display: flex;
+  gap: 12px;
+  color: #666;
+  font-size: 11px;
+}
 
-.loading, .no-changes { padding: 16px; color: #555; text-align: center; }
+.loading,
+.no-changes {
+  padding: 16px;
+  color: #555;
+  text-align: center;
+}
 
-.diff-list { flex: 1; overflow-y: auto; }
+.diff-list {
+  flex: 1;
+  overflow-y: auto;
+}
 
-.file-diff { border-bottom: 1px solid #161628; }
+.file-diff {
+  border-bottom: 1px solid #161628;
+}
 
 .file-header {
   display: flex;
@@ -209,18 +307,58 @@ watch(
   text-align: left;
   color: #aaa;
 }
-.file-header:hover { background: #16162e; }
+.file-header:hover {
+  background: #16162e;
+}
 
-.collapse-icon { font-size: 8px; color: #444; flex-shrink: 0; }
-.file-status { font-size: 11px; color: #666; width: 10px; flex-shrink: 0; }
-.file-path { font-family: monospace; font-size: 11px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.file-badge { font-size: 10px; background: #2a2a3e; color: #666; padding: 1px 4px; border-radius: 3px; flex-shrink: 0; }
+.collapse-icon {
+  font-size: 8px;
+  color: #444;
+  flex-shrink: 0;
+}
+.file-status {
+  font-size: 11px;
+  color: #666;
+  width: 10px;
+  flex-shrink: 0;
+}
+.file-path {
+  font-family: monospace;
+  font-size: 11px;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-badge {
+  font-size: 10px;
+  background: #2a2a3e;
+  color: #666;
+  padding: 1px 4px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
 
-.file-stats { display: flex; gap: 6px; flex-shrink: 0; font-size: 11px; font-family: monospace; }
-.stat-add { color: #4ff7a0; }
-.stat-del { color: #f74f4f; }
+.file-stats {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-family: monospace;
+}
+.stat-add {
+  color: #4ff7a0;
+}
+.stat-del {
+  color: #f74f4f;
+}
 
-.binary-notice { padding: 8px 12px; color: #555; font-size: 11px; font-style: italic; }
+.binary-notice {
+  padding: 8px 12px;
+  color: #555;
+  font-size: 11px;
+  font-style: italic;
+}
 
 .image-preview-container {
   display: flex;
@@ -235,7 +373,7 @@ watch(
   max-height: 480px;
   object-fit: contain;
   border-radius: 4px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
 }
 
 .hunk-header {
@@ -255,13 +393,29 @@ watch(
   line-height: 18px;
   white-space: pre;
 }
-.diff-line--add     { background: rgba(79, 247, 160, 0.06); }
-.diff-line--del     { background: rgba(247, 79, 79, 0.08); }
-.diff-line--context { color: #555; }
+.diff-line--add {
+  background: rgba(79, 247, 160, 0.06);
+}
+.diff-line--del {
+  background: rgba(247, 79, 79, 0.08);
+}
+.diff-line--context {
+  color: #555;
+}
 
-.diff-gutter { width: 14px; text-align: center; flex-shrink: 0; color: #333; user-select: none; }
-.diff-line--add .diff-gutter { color: #4ff7a0; }
-.diff-line--del .diff-gutter { color: #f74f4f; }
+.diff-gutter {
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+  color: #333;
+  user-select: none;
+}
+.diff-line--add .diff-gutter {
+  color: #4ff7a0;
+}
+.diff-line--del .diff-gutter {
+  color: #f74f4f;
+}
 
 .diff-lineno {
   width: 36px;
@@ -273,10 +427,22 @@ watch(
   font-size: 10px;
   line-height: 18px;
 }
-.diff-line--add .diff-lineno.old { color: transparent; }
-.diff-line--del .diff-lineno.new { color: transparent; }
+.diff-line--add .diff-lineno.old {
+  color: transparent;
+}
+.diff-line--del .diff-lineno.new {
+  color: transparent;
+}
 
-.diff-content { padding-left: 6px; color: #ccc; overflow: visible; }
-.diff-line--add .diff-content { color: #9effd0; }
-.diff-line--del .diff-content { color: #ff9090; }
+.diff-content {
+  padding-left: 6px;
+  color: #ccc;
+  overflow: visible;
+}
+.diff-line--add .diff-content {
+  color: #9effd0;
+}
+.diff-line--del .diff-content {
+  color: #ff9090;
+}
 </style>

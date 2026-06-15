@@ -3,16 +3,16 @@ import { ref } from 'vue';
 import { ListBranches, GetAheadBehind, SwitchBranch, FetchAll } from '../../wailsjs/go/main/App';
 
 export interface BranchInfo {
-  name: string
-  isRemote: boolean
-  remote: string
-  isCurrent: boolean
-  hash: string
+  name: string;
+  isRemote: boolean;
+  remote: string;
+  isCurrent: boolean;
+  hash: string;
 }
 
 export interface AheadBehind {
-  ahead: number
-  behind: number
+  ahead: number;
+  behind: number;
 }
 
 export const useBranchesStore = defineStore('branches', () => {
@@ -27,12 +27,9 @@ export const useBranchesStore = defineStore('branches', () => {
     }
     loading.value = true;
     try {
-      const [all, ab] = await Promise.all([
-        ListBranches(repoPath),
-        GetAheadBehind(repoPath),
-      ]);
-      local.value = all.filter(b => !b.isRemote);
-      remote.value = all.filter(b => b.isRemote);
+      const [all, ab] = await Promise.all([ListBranches(repoPath), GetAheadBehind(repoPath)]);
+      local.value = all.filter((b) => !b.isRemote);
+      remote.value = all.filter((b) => b.isRemote);
       aheadBehind.value = ab;
     } finally {
       loading.value = false;

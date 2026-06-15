@@ -19,9 +19,9 @@ import {
 } from '../../wailsjs/go/main/App';
 import type { repo } from '../../wailsjs/go/models';
 
-export type FileStatus = repo.FileStatus
-export type FileDiff = repo.FileDiff
-export type Hunk = repo.Hunk
+export type FileStatus = repo.FileStatus;
+export type FileDiff = repo.FileDiff;
+export type Hunk = repo.Hunk;
 
 export function buildHunkPatch(path: string, hunk: Hunk): string {
   const parts = [
@@ -29,7 +29,7 @@ export function buildHunkPatch(path: string, hunk: Hunk): string {
     `--- a/${path}`,
     `+++ b/${path}`,
     hunk.header,
-    ...hunk.lines.map(l => {
+    ...hunk.lines.map((l) => {
       if (l.type === 'add') {
         return `+${l.content}`;
       }
@@ -43,9 +43,12 @@ export function buildHunkPatch(path: string, hunk: Hunk): string {
 }
 
 export function isConflictedFile(f: FileStatus): boolean {
-  return f.staged === 'U' || f.unstaged === 'U' ||
+  return (
+    f.staged === 'U' ||
+    f.unstaged === 'U' ||
     (f.staged === 'A' && f.unstaged === 'A') ||
-    (f.staged === 'D' && f.unstaged === 'D');
+    (f.staged === 'D' && f.unstaged === 'D')
+  );
 }
 
 export const useStagingStore = defineStore('staging', () => {
@@ -60,16 +63,16 @@ export const useStagingStore = defineStore('staging', () => {
   const isInRebase = ref(false);
   const rebaseState = ref<repo.RebaseState>({ step: 0, total: 0, message: '', onto: '' });
 
-  const conflictedFiles = computed(() =>
-    files.value.filter(isConflictedFile)
-  );
+  const conflictedFiles = computed(() => files.value.filter(isConflictedFile));
 
   const unstagedFiles = computed(() =>
-    files.value.filter(f => !isConflictedFile(f) && f.unstaged !== ' ' && f.unstaged !== '')
+    files.value.filter((f) => !isConflictedFile(f) && f.unstaged !== ' ' && f.unstaged !== '')
   );
 
   const stagedFiles = computed(() =>
-    files.value.filter(f => !isConflictedFile(f) && f.staged !== ' ' && f.staged !== '?' && f.staged !== '')
+    files.value.filter(
+      (f) => !isConflictedFile(f) && f.staged !== ' ' && f.staged !== '?' && f.staged !== ''
+    )
   );
 
   const totalChanges = computed(() => files.value.length);
@@ -177,10 +180,31 @@ export const useStagingStore = defineStore('staging', () => {
   }
 
   return {
-    files, loading, selectedPath, selectedMode, diff, diffLoading,
-    isInMerge, mergeMessage, isInRebase, rebaseState, conflictedFiles,
-    unstagedFiles, stagedFiles, totalChanges,
-    load, selectFile, stageFile, unstageFile, stageHunk, unstageHunk,
-    discardFile, fetchAll, pullBranch, commit, getLastCommitSubject, clear,
+    files,
+    loading,
+    selectedPath,
+    selectedMode,
+    diff,
+    diffLoading,
+    isInMerge,
+    mergeMessage,
+    isInRebase,
+    rebaseState,
+    conflictedFiles,
+    unstagedFiles,
+    stagedFiles,
+    totalChanges,
+    load,
+    selectFile,
+    stageFile,
+    unstageFile,
+    stageHunk,
+    unstageHunk,
+    discardFile,
+    fetchAll,
+    pullBranch,
+    commit,
+    getLastCommitSubject,
+    clear,
   };
 });

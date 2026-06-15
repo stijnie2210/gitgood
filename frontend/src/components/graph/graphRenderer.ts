@@ -5,11 +5,7 @@ const DOT_R = 4;
 
 export { CELL_W };
 
-export function drawGraphCell(
-  ctx: CanvasRenderingContext2D,
-  row: GraphRow,
-  cellH: number,
-): void {
+export function drawGraphCell(ctx: CanvasRenderingContext2D, row: GraphRow, cellH: number): void {
   const w = ctx.canvas.width;
   const midY = cellH / 2;
 
@@ -43,7 +39,7 @@ function drawSegment(
   fromY: number,
   toCol: number,
   toY: number,
-  color: string,
+  color: string
 ): void {
   const fromX = fromCol * CELL_W + CELL_W / 2;
   const toX = toCol * CELL_W + CELL_W / 2;
