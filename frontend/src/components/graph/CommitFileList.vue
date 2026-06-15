@@ -34,17 +34,12 @@ function fileStatus(file: FileDiff): string {
           'status-mod': fileStatus(file) === '~',
           'status-ren': fileStatus(file) === '→',
         }"
-        >{{ fileStatus(file) }}</span
-      >
+      >{{ fileStatus(file) }}</span>
       <span class="file-path">{{ file.newPath || file.oldPath }}</span>
       <span v-if="file.isBinary" class="file-badge">binary</span>
       <span class="file-stats">
-        <span class="stat-add"
-          >+{{ file.hunks.flatMap((h) => h.lines).filter((l) => l.type === 'add').length }}</span
-        >
-        <span class="stat-del"
-          >−{{ file.hunks.flatMap((h) => h.lines).filter((l) => l.type === 'del').length }}</span
-        >
+        <span class="stat-add">+{{ file.hunks.flatMap((h) => h.lines).filter((l) => l.type === 'add').length }}</span>
+        <span class="stat-del">−{{ file.hunks.flatMap((h) => h.lines).filter((l) => l.type === 'del').length }}</span>
       </span>
     </button>
   </div>
