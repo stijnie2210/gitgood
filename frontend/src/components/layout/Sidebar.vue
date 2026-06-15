@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { watch, ref, nextTick, onMounted, onUnmounted } from 'vue';
+
+defineOptions({ inheritAttrs: false });
 import { clampMenuPosition } from '../../composables/useContextMenu';
 import { useReposStore } from '../../stores/repos';
 import { useBranchesStore } from '../../stores/branches';
@@ -226,7 +228,7 @@ async function confirmDelete(force: boolean) {
 </script>
 
 <template>
-  <aside class="sidebar">
+  <aside class="sidebar" v-bind="$attrs">
     <div v-if="!repos.activeRepo" class="empty-state">
       <p>No repository open</p>
       <button @click="repos.pickAndOpen()">Open Repository</button>
@@ -252,14 +254,12 @@ async function confirmDelete(force: boolean) {
                 v-if="branches.aheadBehind.ahead > 0"
                 class="sync-badge ahead"
                 title="Commits to push"
-                >↑{{ branches.aheadBehind.ahead }}</span
-              >
+              >↑{{ branches.aheadBehind.ahead }}</span>
               <span
                 v-if="branches.aheadBehind.behind > 0"
                 class="sync-badge behind"
                 title="Commits to pull"
-                >↓{{ branches.aheadBehind.behind }}</span
-              >
+              >↓{{ branches.aheadBehind.behind }}</span>
             </template>
           </li>
         </ul>
@@ -279,8 +279,7 @@ async function confirmDelete(force: boolean) {
             "
           >
             <span class="branch-icon">↑</span>
-            <span class="remote-label">{{ b.remote }}</span
-            >/{{ b.name }}
+            <span class="remote-label">{{ b.remote }}</span>/{{ b.name }}
           </li>
         </ul>
       </section>

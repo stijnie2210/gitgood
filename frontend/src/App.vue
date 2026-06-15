@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch, type Ref } from 'vue';
+import { useDetailWidth } from './composables/useDetailWidth';
 import TabBar from './components/layout/TabBar.vue';
 import ToolBar from './components/layout/ToolBar.vue';
 import Sidebar from './components/layout/Sidebar.vue';
 import CommitGraph from './components/graph/CommitGraph.vue';
 import CommitDetail from './components/graph/CommitDetail.vue';
+import FileDiffView from './components/graph/FileDiffView.vue';
 import StagingView from './components/staging/StagingView.vue';
 import ToastStack from './components/layout/ToastStack.vue';
 import { useReposStore } from './stores/repos';
@@ -92,8 +94,10 @@ function makeResizer(
   };
 }
 
-const sidebarWidth = ref(220);
-const detailWidth = ref(380);
+const SIDEBAR_KEY = 'gitgood:sidebar-width';
+const sidebarWidth = ref(parseInt(localStorage.getItem(SIDEBAR_KEY) ?? '240', 10));
+watch(sidebarWidth, (v) => localStorage.setItem(SIDEBAR_KEY, String(v)));
+const detailWidth = useDetailWidth();
 
 const startSidebarResize = makeResizer(sidebarWidth, 140, 500, 'right');
 const startDetailResize = makeResizer(detailWidth, 200, 800, 'left');
@@ -149,11 +153,15 @@ const startDetailResize = makeResizer(detailWidth, 200, 800, 'left');
 
           <!-- Commits view -->
           <div v-if="viewMode === 'commits'" class="repo-view">
-            <CommitGraph style="flex: 1; min-width: 300px" />
-
-            <template v-if="commits.selectedHash">
-              <div class="resize-handle" @mousedown.prevent="startDetailResize" />
-              <CommitDetail :style="{ width: detailWidth + 'px' }" />
+            <template v-if="commits.selectedFileIndex !== null">
+              <FileDiffView style="flex: 1" />
+            </template>
+            <template v-else>
+              <CommitGraph style="flex: 1; min-width: 300px" />
+              <template v-if="commits.selectedHash">
+                <div class="resize-handle" @mousedown.prevent="startDetailResize" />
+                <CommitDetail :style="{ width: detailWidth + 'px' }" />
+              </template>
             </template>
           </div>
 

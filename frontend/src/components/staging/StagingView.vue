@@ -30,7 +30,9 @@ const commits = useCommitsStore();
 const staging = useStagingStore();
 const toast = useToastStore();
 
-const fileListWidth = ref(260);
+const STAGING_FL_KEY = 'gitgood:stagingFileListWidth';
+const fileListWidth = ref(parseInt(localStorage.getItem(STAGING_FL_KEY) ?? '260', 10));
+watch(fileListWidth, (v) => localStorage.setItem(STAGING_FL_KEY, String(v)));
 
 function makeResizer(width: Ref<number>, min: number, max: number) {
   let startX = 0;
@@ -305,7 +307,11 @@ async function ctxDiscardFile() {
     return;
   }
   closeFileCtxMenu();
-  await staging.discardFile(repoPath(), m.path);
+  try {
+    await staging.discardFile(repoPath(), m.path);
+  } catch (e) {
+    toast.error(String(e));
+  }
 }
 
 async function ctxStashFile() {
@@ -625,9 +631,7 @@ async function doAbortRebase() {
   <div class="staging-outer">
     <!-- Merge in progress banner -->
     <div v-if="staging.isInMerge" class="merge-banner">
-      <span class="merge-banner-text"
-        >⚡ Merge in progress — resolve all conflicts, then commit</span
-      >
+      <span class="merge-banner-text">⚡ Merge in progress — resolve all conflicts, then commit</span>
       <div v-if="confirmingAbort" class="merge-abort-confirm">
         <span class="merge-abort-confirm-text">Discard all resolutions?</span>
         <button class="merge-abort-btn merge-abort-btn--confirm" @click="doAbortMerge">
@@ -647,9 +651,7 @@ async function doAbortRebase() {
         <span v-if="staging.rebaseState.total" class="rebase-step">
           {{ staging.rebaseState.step }}/{{ staging.rebaseState.total }}
         </span>
-        <span v-if="staging.rebaseState.onto" class="rebase-onto"
-          >onto {{ staging.rebaseState.onto }}</span
-        >
+        <span v-if="staging.rebaseState.onto" class="rebase-onto">onto {{ staging.rebaseState.onto }}</span>
         <span v-if="staging.rebaseState.message" class="rebase-msg">{{
           staging.rebaseState.message
         }}</span>
@@ -778,9 +780,7 @@ async function doAbortRebase() {
               :disabled="staging.conflictedFiles.length > 0"
               @click="doContinueRebase"
             >
-              <span v-if="staging.conflictedFiles.length > 0"
-                >Resolve {{ staging.conflictedFiles.length }} conflict(s) first</span
-              >
+              <span v-if="staging.conflictedFiles.length > 0">Resolve {{ staging.conflictedFiles.length }} conflict(s) first</span>
               <span v-else>↪ Continue Rebase</span>
             </button>
           </template>
@@ -798,6 +798,7 @@ async function doAbortRebase() {
                 placeholder="Commit summary"
                 rows="2"
                 maxlength="200"
+                @keydown.meta.enter="onCommit"
               />
               <span
                 class="char-count"
@@ -815,6 +816,7 @@ async function doAbortRebase() {
               class="desc-input"
               placeholder="Description (optional)"
               rows="2"
+              @keydown.meta.enter="onCommit"
             />
 
             <button

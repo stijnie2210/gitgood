@@ -17,6 +17,7 @@ export const useCommitsStore = defineStore('commits', () => {
   const loadedLimit = ref(INITIAL_LIMIT);
   const error = ref<string | null>(null);
   const selectedHash = ref<string | null>(null);
+  const selectedFileIndex = ref<number | null>(null);
   const diff = ref<FileDiff[]>([]);
   const diffLoading = ref(false);
   const currentRepoPath = ref<string | null>(null);
@@ -62,8 +63,17 @@ export const useCommitsStore = defineStore('commits', () => {
     }
   }
 
+  function selectFile(index: number) {
+    selectedFileIndex.value = index;
+  }
+
+  function clearFileSelection() {
+    selectedFileIndex.value = null;
+  }
+
   async function selectCommit(repoPath: string, hash: string) {
     selectedHash.value = hash;
+    selectedFileIndex.value = null;
     diffLoading.value = true;
     diff.value = [];
     try {
@@ -77,6 +87,7 @@ export const useCommitsStore = defineStore('commits', () => {
     rows.value = [];
     error.value = null;
     selectedHash.value = null;
+    selectedFileIndex.value = null;
     diff.value = [];
     hasMore.value = false;
     currentRepoPath.value = null;
@@ -89,12 +100,15 @@ export const useCommitsStore = defineStore('commits', () => {
     hasMore,
     error,
     selectedHash,
+    selectedFileIndex,
     diff,
     diffLoading,
     maxColumn,
     load,
     loadMore,
     selectCommit,
+    selectFile,
+    clearFileSelection,
     clear,
   };
 });

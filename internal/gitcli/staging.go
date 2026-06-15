@@ -1,5 +1,11 @@
 package gitcli
 
+import (
+	"os"
+	"path/filepath"
+	"strings"
+)
+
 func StageFile(repoPath, path string) error {
 	_, err := Run(repoPath, "add", "--", path)
 	return err
@@ -21,5 +27,11 @@ func ApplyPatch(repoPath string, patch []byte, reverse bool) error {
 
 func DiscardFile(repoPath, path string) error {
 	_, err := Run(repoPath, "restore", "--", path)
-	return err
+	if err != nil {
+		if exitErr, ok := err.(*ExitError); ok && strings.Contains(exitErr.Stderr, "did not match any file") {
+			return os.Remove(filepath.Join(repoPath, path))
+		}
+		return err
+	}
+	return nil
 }

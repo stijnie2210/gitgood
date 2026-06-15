@@ -240,9 +240,7 @@ async function saveAndStage() {
     <div class="cv-header">
       <span class="cv-filepath">{{ path }}</span>
       <span v-if="!loading" class="cv-status" :class="{ resolved: unresolvedCount === 0 }">
-        <template v-if="unresolvedCount > 0"
-          >⚠ {{ unresolvedCount }} conflict{{ unresolvedCount > 1 ? 's' : '' }} remaining</template
-        >
+        <template v-if="unresolvedCount > 0">⚠ {{ unresolvedCount }} conflict{{ unresolvedCount > 1 ? 's' : '' }} remaining</template>
         <template v-else>✓ All conflicts resolved</template>
       </span>
     </div>
@@ -289,8 +287,7 @@ async function saveAndStage() {
                 <span
                   v-if="selectionOrder(asConflict(chunk), 'ours', li) > 0"
                   class="cv-badge-num ours"
-                  >{{ selectionOrder(asConflict(chunk), 'ours', li) }}</span
-                >
+                >{{ selectionOrder(asConflict(chunk), 'ours', li) }}</span>
                 <span v-else class="cv-badge-dot">○</span>
               </span>
               <code class="cv-line-content">{{ line || ' ' }}</code>
@@ -330,8 +327,7 @@ async function saveAndStage() {
                 <span
                   v-if="selectionOrder(asConflict(chunk), 'theirs', li) > 0"
                   class="cv-badge-num theirs"
-                  >{{ selectionOrder(asConflict(chunk), 'theirs', li) }}</span
-                >
+                >{{ selectionOrder(asConflict(chunk), 'theirs', li) }}</span>
                 <span v-else class="cv-badge-dot">○</span>
               </span>
               <code class="cv-line-content">{{ line || ' ' }}</code>
@@ -346,9 +342,7 @@ async function saveAndStage() {
             <div class="cv-preview-header">
               <span>
                 Preview
-                <span v-if="asConflict(chunk).textOverride !== null" class="cv-edited-badge"
-                  >edited</span
-                >
+                <span v-if="asConflict(chunk).textOverride !== null" class="cv-edited-badge">edited</span>
               </span>
               <div class="cv-preview-actions">
                 <button
