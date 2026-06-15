@@ -600,7 +600,9 @@ async function doAbortRebase() {
   <div class="staging-outer">
     <!-- Merge in progress banner -->
     <div v-if="staging.isInMerge" class="merge-banner">
-      <span class="merge-banner-text">⚡ Merge in progress — resolve all conflicts, then commit</span>
+      <span class="merge-banner-text"
+        >⚡ Merge in progress — resolve all conflicts, then commit</span
+      >
       <div v-if="confirmingAbort" class="merge-abort-confirm">
         <span class="merge-abort-confirm-text">Discard all resolutions?</span>
         <button class="merge-abort-btn merge-abort-btn--confirm" @click="doAbortMerge">
@@ -620,7 +622,9 @@ async function doAbortRebase() {
         <span v-if="staging.rebaseState.total" class="rebase-step">
           {{ staging.rebaseState.step }}/{{ staging.rebaseState.total }}
         </span>
-        <span v-if="staging.rebaseState.onto" class="rebase-onto">onto {{ staging.rebaseState.onto }}</span>
+        <span v-if="staging.rebaseState.onto" class="rebase-onto"
+          >onto {{ staging.rebaseState.onto }}</span
+        >
         <span v-if="staging.rebaseState.message" class="rebase-msg">{{
           staging.rebaseState.message
         }}</span>
@@ -749,7 +753,9 @@ async function doAbortRebase() {
               :disabled="staging.conflictedFiles.length > 0"
               @click="doContinueRebase"
             >
-              <span v-if="staging.conflictedFiles.length > 0">Resolve {{ staging.conflictedFiles.length }} conflict(s) first</span>
+              <span v-if="staging.conflictedFiles.length > 0"
+                >Resolve {{ staging.conflictedFiles.length }} conflict(s) first</span
+              >
               <span v-else>↪ Continue Rebase</span>
             </button>
           </template>

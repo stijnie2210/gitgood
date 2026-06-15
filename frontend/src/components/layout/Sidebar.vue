@@ -254,12 +254,14 @@ async function confirmDelete(force: boolean) {
                 v-if="branches.aheadBehind.ahead > 0"
                 class="sync-badge ahead"
                 title="Commits to push"
-              >↑{{ branches.aheadBehind.ahead }}</span>
+                >↑{{ branches.aheadBehind.ahead }}</span
+              >
               <span
                 v-if="branches.aheadBehind.behind > 0"
                 class="sync-badge behind"
                 title="Commits to pull"
-              >↓{{ branches.aheadBehind.behind }}</span>
+                >↓{{ branches.aheadBehind.behind }}</span
+              >
             </template>
           </li>
         </ul>
@@ -279,7 +281,8 @@ async function confirmDelete(force: boolean) {
             "
           >
             <span class="branch-icon">↑</span>
-            <span class="remote-label">{{ b.remote }}</span>/{{ b.name }}
+            <span class="remote-label">{{ b.remote }}</span
+            >/{{ b.name }}
           </li>
         </ul>
       </section>

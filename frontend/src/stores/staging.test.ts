@@ -1,16 +1,21 @@
 import { describe, it, expect } from 'vitest';
 import { buildHunkPatch, isConflictedFile } from './staging';
 import type { FileStatus } from './staging';
+import { repo } from '../../wailsjs/go/models';
+
+function makeHunk(
+  header: string,
+  lines: { type: string; content: string; oldLine: number; newLine: number }[]
+): repo.Hunk {
+  return repo.Hunk.createFrom({ header, lines });
+}
 
 describe('buildHunkPatch', () => {
   it('produces the correct patch format for add lines', () => {
-    const hunk = {
-      header: '@@ -0,0 +1,2 @@',
-      lines: [
-        { type: 'add', content: 'first line', oldLine: 0, newLine: 1 },
-        { type: 'add', content: 'second line', oldLine: 0, newLine: 2 },
-      ],
-    };
+    const hunk = makeHunk('@@ -0,0 +1,2 @@', [
+      { type: 'add', content: 'first line', oldLine: 0, newLine: 1 },
+      { type: 'add', content: 'second line', oldLine: 0, newLine: 2 },
+    ]);
     const patch = buildHunkPatch('foo.go', hunk);
 
     expect(patch).toContain('diff --git a/foo.go b/foo.go');
@@ -22,10 +27,9 @@ describe('buildHunkPatch', () => {
   });
 
   it('prefixes del lines with -', () => {
-    const hunk = {
-      header: '@@ -1,1 +0,0 @@',
-      lines: [{ type: 'del', content: 'remove me', oldLine: 1, newLine: 0 }],
-    };
+    const hunk = makeHunk('@@ -1,1 +0,0 @@', [
+      { type: 'del', content: 'remove me', oldLine: 1, newLine: 0 },
+    ]);
     const patch = buildHunkPatch('bar.go', hunk);
 
     expect(patch).toContain('-remove me');
@@ -33,15 +37,12 @@ describe('buildHunkPatch', () => {
   });
 
   it('prefixes context lines with a space', () => {
-    const hunk = {
-      header: '@@ -1,3 +1,3 @@',
-      lines: [
-        { type: 'context', content: 'before', oldLine: 1, newLine: 1 },
-        { type: 'del', content: 'old', oldLine: 2, newLine: 0 },
-        { type: 'add', content: 'new', oldLine: 0, newLine: 2 },
-        { type: 'context', content: 'after', oldLine: 3, newLine: 3 },
-      ],
-    };
+    const hunk = makeHunk('@@ -1,3 +1,3 @@', [
+      { type: 'context', content: 'before', oldLine: 1, newLine: 1 },
+      { type: 'del', content: 'old', oldLine: 2, newLine: 0 },
+      { type: 'add', content: 'new', oldLine: 0, newLine: 2 },
+      { type: 'context', content: 'after', oldLine: 3, newLine: 3 },
+    ]);
     const patch = buildHunkPatch('baz.go', hunk);
 
     expect(patch).toContain(' before');
@@ -49,24 +50,19 @@ describe('buildHunkPatch', () => {
   });
 
   it('ends with a newline (required by git apply)', () => {
-    const hunk = {
-      header: '@@ -1,1 +1,1 @@',
-      lines: [{ type: 'add', content: 'x', oldLine: 0, newLine: 1 }],
-    };
+    const hunk = makeHunk('@@ -1,1 +1,1 @@', [
+      { type: 'add', content: 'x', oldLine: 0, newLine: 1 },
+    ]);
     const patch = buildHunkPatch('f.go', hunk);
     expect(patch.endsWith('\n')).toBe(true);
   });
 
   it('matches the Go BuildHunkPatch output for a mixed hunk', () => {
-    // This verifies parity between frontend and backend patch construction
-    const hunk = {
-      header: '@@ -1,2 +1,2 @@',
-      lines: [
-        { type: 'context', content: 'ctx', oldLine: 1, newLine: 1 },
-        { type: 'del', content: 'old', oldLine: 2, newLine: 0 },
-        { type: 'add', content: 'new', oldLine: 0, newLine: 2 },
-      ],
-    };
+    const hunk = makeHunk('@@ -1,2 +1,2 @@', [
+      { type: 'context', content: 'ctx', oldLine: 1, newLine: 1 },
+      { type: 'del', content: 'old', oldLine: 2, newLine: 0 },
+      { type: 'add', content: 'new', oldLine: 0, newLine: 2 },
+    ]);
     const patch = buildHunkPatch('file.go', hunk);
     const expected = [
       'diff --git a/file.go b/file.go',

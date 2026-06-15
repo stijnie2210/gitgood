@@ -20,7 +20,8 @@ const selectedRow = computed(
           :key="l.name"
           class="label"
           :class="`label--${l.type}`"
-        >{{ l.type === 'remote' ? `${l.remote}/${l.name}` : l.name }}</span>
+          >{{ l.type === 'remote' ? `${l.remote}/${l.name}` : l.name }}</span
+        >
       </div>
       <div class="meta-subject">{{ selectedRow.subject }}</div>
       <div class="meta-info">
