@@ -45,6 +45,8 @@ watchEffect(() => {
   </div>
 </template>
 
+<style src="../../assets/labels.css" />
+
 <style scoped>
 .row-inner {
   display: flex;
@@ -82,33 +84,6 @@ watchEffect(() => {
   display: flex;
   gap: 4px;
   flex-shrink: 0;
-}
-
-.label {
-  padding: 1px 5px;
-  border-radius: 3px;
-  font-size: 10px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-.label--head {
-  background: #4f8ef7;
-  color: #fff;
-}
-.label--branch {
-  background: #2a3a5e;
-  color: #7aadff;
-  border: 1px solid #3a5080;
-}
-.label--remote {
-  background: #2a4a3a;
-  color: #7affb8;
-  border: 1px solid #3a6050;
-}
-.label--tag {
-  background: #4a3a20;
-  color: #ffcc66;
-  border: 1px solid #6a5030;
 }
 
 .row-subject {

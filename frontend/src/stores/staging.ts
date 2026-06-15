@@ -169,6 +169,17 @@ export const useStagingStore = defineStore('staging', () => {
     return GetLastCommitSubject(repoPath);
   }
 
+  function clearSelection() {
+    selectedPath.value = null;
+    diff.value = [];
+  }
+
+  function setSelectedConflict(path: string) {
+    selectedPath.value = path;
+    selectedMode.value = 'unstaged';
+    diff.value = [];
+  }
+
   function clear() {
     files.value = [];
     selectedPath.value = null;
@@ -205,6 +216,8 @@ export const useStagingStore = defineStore('staging', () => {
     pullBranch,
     commit,
     getLastCommitSubject,
+    clearSelection,
+    setSelectedConflict,
     clear,
   };
 });

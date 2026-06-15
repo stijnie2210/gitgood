@@ -170,7 +170,7 @@ async function confirmTag() {
     </template>
 
     <!-- ── Branch input ─────────────────────────── -->
-    <template v-if="mode === 'branch'">
+    <template v-else-if="mode === 'branch'">
       <div class="ctx-input-header">Create branch at {{ row.shortHash }}</div>
       <div class="ctx-input-row">
         <input

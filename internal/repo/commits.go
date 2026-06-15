@@ -5,9 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-git/go-git/v5/plumbing"
 	gogitdiff "github.com/go-git/go-git/v5/plumbing/format/diff"
-	"github.com/go-git/go-git/v5/plumbing/object"
 
 	"gitgood/internal/gitcli"
 	"gitgood/internal/graph"
@@ -149,78 +147,12 @@ type FileDiff struct {
 }
 
 func (m *Manager) GetCommitDiff(repoPath, hash string) ([]FileDiff, error) {
-	r, err := m.Get(repoPath)
-	if err != nil {
+	if _, err := m.Get(repoPath); err != nil {
 		return nil, err
 	}
-	diffs, err := getCommitDiffGoGit(r, hash)
-	if err != nil {
-		// go-git fails on repos with multi-pack-index or non-standard pack names
-		return getCommitDiffShell(repoPath, hash)
-	}
-	return diffs, nil
+	return getCommitDiffShell(repoPath, hash)
 }
 
-func getCommitDiffGoGit(r interface {
-	CommitObject(plumbing.Hash) (*object.Commit, error)
-}, hash string) ([]FileDiff, error) {
-	commit, err := r.CommitObject(plumbing.NewHash(hash))
-	if err != nil {
-		return nil, err
-	}
-
-	commitTree, err := commit.Tree()
-	if err != nil {
-		return nil, err
-	}
-
-	var parentTree *object.Tree
-	if commit.NumParents() > 0 {
-		parent, err := commit.Parent(0)
-		if err != nil {
-			return nil, err
-		}
-		parentTree, err = parent.Tree()
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		parentTree = &object.Tree{}
-	}
-
-	changes, err := object.DiffTree(parentTree, commitTree)
-	if err != nil {
-		return nil, err
-	}
-
-	patch, err := changes.Patch()
-	if err != nil {
-		return nil, err
-	}
-
-	var diffs []FileDiff
-	for _, fp := range patch.FilePatches() {
-		from, to := fp.Files()
-		fd := FileDiff{Hunks: []Hunk{}, IsBinary: fp.IsBinary()}
-		if from != nil {
-			fd.OldPath = from.Path()
-		}
-		if to != nil {
-			fd.NewPath = to.Path()
-		}
-		if fd.NewPath == "" {
-			fd.NewPath = fd.OldPath
-		}
-		if !fp.IsBinary() {
-			fd.Hunks = buildHunks(fp)
-		}
-		diffs = append(diffs, fd)
-	}
-	if diffs == nil {
-		diffs = []FileDiff{}
-	}
-	return diffs, nil
-}
 
 func getCommitDiffShell(repoPath, hash string) ([]FileDiff, error) {
 	result, err := gitcli.Run(repoPath, "diff-tree", "--no-commit-id", "-p", "--root", "-U3", hash)

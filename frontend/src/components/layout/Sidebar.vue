@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { watch, ref, nextTick, onMounted, onUnmounted } from 'vue';
-
-defineOptions({ inheritAttrs: false });
 import { clampMenuPosition } from '../../composables/useContextMenu';
 import { useReposStore } from '../../stores/repos';
 import { useBranchesStore } from '../../stores/branches';
@@ -14,6 +12,8 @@ import {
   RenameBranch,
   PushNamedBranch,
 } from '../../../wailsjs/go/main/App';
+
+defineOptions({ inheritAttrs: false });
 
 const repos = useReposStore();
 const branches = useBranchesStore();
@@ -76,6 +76,7 @@ interface CtxMenu {
 
 const ctxMenu = ref<CtxMenu | null>(null);
 const renameInputRef = ref<HTMLInputElement | null>(null);
+const branchCtxMenuEl = ref<HTMLElement | null>(null);
 
 async function openCtxMenu(
   e: MouseEvent,
@@ -97,7 +98,7 @@ async function openCtxMenu(
     renameValue: label,
   };
   await nextTick();
-  const menu = document.getElementById('branch-ctx-menu');
+  const menu = branchCtxMenuEl.value;
   if (menu && ctxMenu.value) {
     const { x, y } = clampMenuPosition(menu, e.clientX, e.clientY);
     ctxMenu.value = { ...ctxMenu.value, x, y };
@@ -109,8 +110,7 @@ function closeCtxMenu() {
 }
 
 function onWindowMouseDown(e: MouseEvent) {
-  const menu = document.getElementById('branch-ctx-menu');
-  if (menu && !menu.contains(e.target as Node)) {
+  if (branchCtxMenuEl.value && !branchCtxMenuEl.value.contains(e.target as Node)) {
     closeCtxMenu();
   }
 }
@@ -254,12 +254,14 @@ async function confirmDelete(force: boolean) {
                 v-if="branches.aheadBehind.ahead > 0"
                 class="sync-badge ahead"
                 title="Commits to push"
-              >↑{{ branches.aheadBehind.ahead }}</span>
+                >↑{{ branches.aheadBehind.ahead }}</span
+              >
               <span
                 v-if="branches.aheadBehind.behind > 0"
                 class="sync-badge behind"
                 title="Commits to pull"
-              >↓{{ branches.aheadBehind.behind }}</span>
+                >↓{{ branches.aheadBehind.behind }}</span
+              >
             </template>
           </li>
         </ul>
@@ -279,7 +281,8 @@ async function confirmDelete(force: boolean) {
             "
           >
             <span class="branch-icon">↑</span>
-            <span class="remote-label">{{ b.remote }}</span>/{{ b.name }}
+            <span class="remote-label">{{ b.remote }}</span
+            >/{{ b.name }}
           </li>
         </ul>
       </section>
@@ -290,7 +293,7 @@ async function confirmDelete(force: boolean) {
   <Teleport to="body">
     <div
       v-if="ctxMenu"
-      id="branch-ctx-menu"
+      ref="branchCtxMenuEl"
       class="ctx-menu"
       :style="{ left: ctxMenu.x + 'px', top: ctxMenu.y + 'px' }"
     >

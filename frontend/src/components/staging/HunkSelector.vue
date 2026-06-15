@@ -68,7 +68,7 @@ const isBinary = computed(() => props.diffs.some((d) => d.isBinary));
 
     <!-- Hunks -->
     <div v-else class="hunks-scroll">
-      <div v-for="(hunk, hi) in flatHunks" :key="hi" class="hunk-block">
+      <div v-for="(hunk, hi) in flatHunks" :key="hunk.header + hi" class="hunk-block">
         <div class="hunk-header-row">
           <span class="hunk-header-text">{{ hunk.header }}</span>
           <button

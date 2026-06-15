@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useDetailWidth } from '../../composables/useDetailWidth';
+import { isImageFile, imageDataUrl } from '../../utils/imageUtils';
 
 const fileListWidth = useDetailWidth();
 
@@ -29,22 +30,9 @@ const file = computed(() =>
   commits.selectedFileIndex !== null ? commits.diff[commits.selectedFileIndex] : null
 );
 
-const selectedRow = computed(() =>
-  commits.rows.find((r) => r.hash === commits.selectedHash) ?? null
+const selectedRow = computed(
+  () => commits.rows.find((r) => r.hash === commits.selectedHash) ?? null
 );
-
-const IMAGE_EXTENSIONS = new Set([
-  'png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico', 'tiff', 'avif',
-]);
-const IMAGE_MIME: Record<string, string> = {
-  png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif',
-  webp: 'image/webp', svg: 'image/svg+xml', bmp: 'image/bmp',
-  ico: 'image/x-icon', tiff: 'image/tiff', avif: 'image/avif',
-};
-
-function isImageFile(path: string): boolean {
-  return IMAGE_EXTENSIONS.has(path.split('.').pop()?.toLowerCase() ?? '');
-}
 
 const imageSrc = ref<string | null>(null);
 const imageLoading = ref(false);
@@ -70,8 +58,7 @@ watch(
     imageLoading.value = true;
     try {
       const b64 = await GetFileAtCommitBase64(repoPath, hash, path);
-      const ext = path.split('.').pop()?.toLowerCase() ?? '';
-      imageSrc.value = `data:${IMAGE_MIME[ext] ?? 'image/png'};base64,${b64}`;
+      imageSrc.value = imageDataUrl(path, b64);
     } catch {
       // imageSrc stays null
     } finally {
@@ -102,7 +89,10 @@ function navigateTo(delta: number) {
 }
 
 function onKeyDown(e: KeyboardEvent) {
-  if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') {
+  if (
+    (e.target as HTMLElement).tagName === 'INPUT' ||
+    (e.target as HTMLElement).tagName === 'TEXTAREA'
+  ) {
     return;
   }
   if (e.key === 'Escape') {
@@ -128,10 +118,10 @@ onUnmounted(() => document.removeEventListener('keydown', onKeyDown));
         <span class="fdv-back-arrow">‹</span>
         Commits
       </button>
-      <div class="fdv-title" v-if="file">
+      <div v-if="file" class="fdv-title">
         <span class="fdv-filepath">{{ filePath(file) }}</span>
       </div>
-      <div class="fdv-commit-chip" v-if="selectedRow">
+      <div v-if="selectedRow" class="fdv-commit-chip">
         <span class="fdv-chip-hash">{{ selectedRow.shortHash }}</span>
         <span class="fdv-chip-subject">{{ selectedRow.subject }}</span>
       </div>
@@ -140,7 +130,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeyDown));
     <!-- Body -->
     <div class="fdv-body">
       <!-- Diff content -->
-      <div class="fdv-diff" v-if="file">
+      <div v-if="file" class="fdv-diff">
         <template v-if="file.isBinary">
           <template v-if="isImageFile(filePath(file))">
             <div v-if="imageLoading" class="fdv-notice">Loading…</div>
@@ -153,7 +143,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeyDown));
         </template>
         <template v-else>
           <div v-if="file.hunks.length === 0" class="fdv-notice">No changes</div>
-          <div v-for="(hunk, hi) in file.hunks" :key="hi" class="fdv-hunk">
+          <div v-for="(hunk, hi) in file.hunks" :key="hunk.header + hi" class="fdv-hunk">
             <div class="fdv-hunk-header">{{ hunk.header }}</div>
             <div
               v-for="(line, li) in hunk.lines"
@@ -219,7 +209,9 @@ onUnmounted(() => document.removeEventListener('keydown', onKeyDown));
   font-size: 12px;
   cursor: pointer;
   flex-shrink: 0;
-  transition: color 0.15s, border-color 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
 }
 .fdv-back:hover {
   color: #ccc;
