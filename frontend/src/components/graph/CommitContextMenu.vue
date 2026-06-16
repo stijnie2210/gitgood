@@ -8,6 +8,7 @@ import {
   CreateBranchAt,
   RevertCommit,
   CreateTag,
+  PushTag,
   ResetBranch,
 } from '../../../wailsjs/go/main/App';
 
@@ -25,7 +26,7 @@ const emit = defineEmits<{
 
 const toast = useToastStore();
 
-type Mode = 'menu' | 'branch' | 'tag' | 'revert-confirm';
+type Mode = 'menu' | 'branch' | 'tag' | 'tag-created' | 'revert-confirm';
 const mode = ref<Mode>('menu');
 const inputVal = ref('');
 const inputEl = ref<HTMLInputElement | null>(null);
@@ -145,8 +146,29 @@ async function confirmTag() {
   }
   try {
     await CreateTag(props.repoPath, name, props.row.hash);
-    toast.success(`Tag '${name}' created at ${props.row.shortHash}`);
     emit('refresh');
+    mode.value = 'tag-created';
+  } catch (e) {
+    toast.error(String(e));
+    emit('close');
+  }
+}
+
+async function pushCreatedTag() {
+  const name = inputVal.value.trim();
+  try {
+    await PushTag(props.repoPath, name);
+    toast.success(`Tag '${name}' pushed`);
+  } catch (e) {
+    toast.error(String(e));
+  }
+  emit('close');
+}
+
+async function pushTag(name: string) {
+  try {
+    await PushTag(props.repoPath, name);
+    toast.success(`Tag '${name}' pushed`);
   } catch (e) {
     toast.error(String(e));
   }
@@ -201,6 +223,15 @@ async function confirmTag() {
       </div>
     </template>
 
+    <!-- ── Tag created ────────────────────────────── -->
+    <template v-else-if="mode === 'tag-created'">
+      <div class="ctx-input-header">Tag '{{ inputVal }}' created</div>
+      <div class="ctx-confirm-row">
+        <button class="ctx-confirm-btn ctx-confirm-btn--yes" @click="pushCreatedTag">Push tag</button>
+        <button class="ctx-confirm-btn ctx-confirm-btn--cancel" @click="emit('close')">Done</button>
+      </div>
+    </template>
+
     <!-- ── Main menu ────────────────────────────── -->
     <template v-else>
       <div class="ctx-header">{{ row.shortHash }} — {{ row.subject }}</div>
@@ -233,6 +264,18 @@ async function confirmTag() {
       <div class="ctx-divider" />
 
       <button class="ctx-item" @click="openTagInput">Create tag here…</button>
+
+      <template v-if="row.labels.some((l) => l.type === 'tag')">
+        <div class="ctx-divider" />
+        <button
+          v-for="l in row.labels.filter((l) => l.type === 'tag')"
+          :key="l.name"
+          class="ctx-item"
+          @click="pushTag(l.name)"
+        >
+          Push tag '{{ l.name }}'
+        </button>
+      </template>
     </template>
   </div>
 </template>

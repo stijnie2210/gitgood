@@ -158,6 +158,10 @@ export function PushNamedBranch(arg1, arg2) {
   return window['go']['main']['App']['PushNamedBranch'](arg1, arg2);
 }
 
+export function PushTag(arg1, arg2) {
+  return window['go']['main']['App']['PushTag'](arg1, arg2);
+}
+
 export function RenameBranch(arg1, arg2, arg3) {
   return window['go']['main']['App']['RenameBranch'](arg1, arg2, arg3);
 }

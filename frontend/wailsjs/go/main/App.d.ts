@@ -82,6 +82,8 @@ export function PushBranch(arg1:string):Promise<void>;
 
 export function PushNamedBranch(arg1:string,arg2:string):Promise<void>;
 
+export function PushTag(arg1:string,arg2:string):Promise<void>;
+
 export function RenameBranch(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function ResetBranch(arg1:string,arg2:string,arg3:string):Promise<void>;

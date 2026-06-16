@@ -237,6 +237,10 @@ func (a *App) PushNamedBranch(repoPath, name string) error {
 	return gitcli.PushNamedBranch(repoPath, name)
 }
 
+func (a *App) PushTag(repoPath, tagName string) error {
+	return gitcli.PushTag(repoPath, tagName)
+}
+
 func (a *App) GetFileBase64(repoPath, filePath string) (string, error) {
 	data, err := os.ReadFile(filepath.Join(repoPath, filePath))
 	if err != nil {
