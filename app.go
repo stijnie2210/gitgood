@@ -177,6 +177,10 @@ func (a *App) CreateTag(repoPath, name, hash string) error {
 	return gitcli.CreateTag(repoPath, name, hash)
 }
 
+func (a *App) MoveTag(repoPath, name, hash string) error {
+	return gitcli.MoveTag(repoPath, name, hash)
+}
+
 func (a *App) ResetBranch(repoPath, hash, mode string) error {
 	return gitcli.ResetBranch(repoPath, hash, mode)
 }

@@ -8,6 +8,7 @@ import {
   CreateBranchAt,
   RevertCommit,
   CreateTag,
+  MoveTag,
   PushTag,
   ResetBranch,
 } from '../../../wailsjs/go/main/App';
@@ -26,7 +27,7 @@ const emit = defineEmits<{
 
 const toast = useToastStore();
 
-type Mode = 'menu' | 'branch' | 'tag' | 'tag-created' | 'revert-confirm';
+type Mode = 'menu' | 'branch' | 'tag' | 'move-tag' | 'tag-created' | 'revert-confirm';
 const mode = ref<Mode>('menu');
 const inputVal = ref('');
 const inputEl = ref<HTMLInputElement | null>(null);
@@ -139,6 +140,27 @@ function openTagInput() {
   nextTick(() => inputEl.value?.focus());
 }
 
+function openMoveTagInput() {
+  mode.value = 'move-tag';
+  inputVal.value = '';
+  nextTick(() => inputEl.value?.focus());
+}
+
+async function confirmMoveTag() {
+  const name = inputVal.value.trim();
+  if (!name) {
+    return;
+  }
+  try {
+    await MoveTag(props.repoPath, name, props.row.hash);
+    emit('refresh');
+    mode.value = 'tag-created';
+  } catch (e) {
+    toast.error(String(e));
+    emit('close');
+  }
+}
+
 async function confirmTag() {
   const name = inputVal.value.trim();
   if (!name) {
@@ -223,6 +245,22 @@ async function pushTag(name: string) {
       </div>
     </template>
 
+    <!-- ── Move tag input ────────────────────────────── -->
+    <template v-else-if="mode === 'move-tag'">
+      <div class="ctx-input-header">Move tag to {{ row.shortHash }}</div>
+      <div class="ctx-input-row">
+        <input
+          ref="inputEl"
+          v-model="inputVal"
+          class="ctx-input"
+          placeholder="existing-tag-name"
+          @keydown.enter="confirmMoveTag"
+          @keydown.escape="emit('close')"
+        />
+        <button class="ctx-confirm" @click="confirmMoveTag">Move</button>
+      </div>
+    </template>
+
     <!-- ── Tag created ────────────────────────────── -->
     <template v-else-if="mode === 'tag-created'">
       <div class="ctx-input-header">Tag '{{ inputVal }}' created</div>
@@ -264,6 +302,7 @@ async function pushTag(name: string) {
       <div class="ctx-divider" />
 
       <button class="ctx-item" @click="openTagInput">Create tag here…</button>
+      <button class="ctx-item" @click="openMoveTagInput">Move tag here…</button>
 
       <template v-if="row.labels.some((l) => l.type === 'tag')">
         <div class="ctx-divider" />

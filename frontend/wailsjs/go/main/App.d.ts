@@ -66,6 +66,8 @@ export function ListRecentRepositories():Promise<Array<main.RecentRepo>>;
 
 export function LoadSession():Promise<repo.Session>;
 
+export function MoveTag(arg1:string,arg2:string,arg3:string):Promise<void>;
+
 export function OpenInDefaultApp(arg1:string,arg2:string):Promise<void>;
 
 export function OpenInEditor(arg1:string,arg2:string):Promise<void>;

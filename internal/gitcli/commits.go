@@ -28,6 +28,11 @@ func CreateTag(repoPath, name, hash string) error {
 	return err
 }
 
+func MoveTag(repoPath, name, hash string) error {
+	_, err := Run(repoPath, "tag", "-f", name, hash)
+	return err
+}
+
 func ResetBranch(repoPath, hash, mode string) error {
 	switch mode {
 	case "soft", "mixed", "hard":

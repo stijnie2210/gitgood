@@ -126,6 +126,10 @@ export function LoadSession() {
   return window['go']['main']['App']['LoadSession']();
 }
 
+export function MoveTag(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MoveTag'](arg1, arg2, arg3);
+}
+
 export function OpenInDefaultApp(arg1, arg2) {
   return window['go']['main']['App']['OpenInDefaultApp'](arg1, arg2);
 }
