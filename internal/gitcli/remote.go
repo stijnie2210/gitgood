@@ -19,3 +19,8 @@ func PushTag(repoPath, tagName string) error {
 	_, err := Run(repoPath, "push", "origin", "refs/tags/"+tagName)
 	return err
 }
+
+func ForcePushTag(repoPath, tagName string) error {
+	_, err := Run(repoPath, "push", "--force", "origin", "refs/tags/"+tagName)
+	return err
+}

@@ -37,6 +37,8 @@ export function DropStash(arg1:string,arg2:string):Promise<void>;
 
 export function FetchAll(arg1:string):Promise<void>;
 
+export function ForcePushTag(arg1:string,arg2:string):Promise<void>;
+
 export function GetAheadBehind(arg1:string):Promise<repo.AheadBehind>;
 
 export function GetCommitDiff(arg1:string,arg2:string):Promise<Array<repo.FileDiff>>;

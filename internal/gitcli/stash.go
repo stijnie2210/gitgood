@@ -18,7 +18,7 @@ type StashEntry struct {
 func ListStashes(repoPath string) ([]StashEntry, error) {
 	result, err := Run(repoPath, "stash", "list", "--format=%gd\t%H\t%gs\t%ci")
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 	trimmed := strings.TrimSpace(result.Stdout)
 	if trimmed == "" {
@@ -26,7 +26,7 @@ func ListStashes(repoPath string) ([]StashEntry, error) {
 	}
 
 	var entries []StashEntry
-	for i, line := range strings.Split(trimmed, "\n") {
+	for _, line := range strings.Split(trimmed, "\n") {
 		if line == "" {
 			continue
 		}
@@ -38,6 +38,9 @@ func ListStashes(repoPath string) ([]StashEntry, error) {
 		hash := parts[1]
 		message := parts[2]
 		dateStr := parts[3]
+
+		var idx int
+		fmt.Sscanf(ref, "stash@{%d}", &idx)
 
 		branch := ""
 		if rest, ok := strings.CutPrefix(message, "WIP on "); ok {
@@ -57,7 +60,7 @@ func ListStashes(repoPath string) ([]StashEntry, error) {
 		}
 
 		entries = append(entries, StashEntry{
-			Index:   i,
+			Index:   idx,
 			Ref:     ref,
 			Hash:    hash,
 			Message: message,
@@ -84,16 +87,46 @@ func PopStash(repoPath, ref string) error {
 }
 
 func RenameStash(repoPath, ref, newMessage string) error {
-	hashResult, err := Run(repoPath, "rev-parse", ref)
+	// stash store always inserts at stash@{0}; rebuild to preserve original order.
+	listResult, err := Run(repoPath, "stash", "list", "--format=%gd\t%H\t%gs")
 	if err != nil {
-		return fmt.Errorf("could not resolve %s: %w", ref, err)
+		return fmt.Errorf("could not list stashes: %w", err)
 	}
-	hash := strings.TrimSpace(hashResult.Stdout)
-	if _, err = Run(repoPath, "stash", "drop", ref); err != nil {
-		return err
+
+	type entry struct{ hash, msg string }
+	var entries []entry
+	found := false
+	for _, line := range strings.Split(strings.TrimSpace(listResult.Stdout), "\n") {
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, "\t", 3)
+		if len(parts) < 3 {
+			continue
+		}
+		msg := parts[2]
+		if parts[0] == ref {
+			msg = newMessage
+			found = true
+		}
+		entries = append(entries, entry{parts[1], msg})
 	}
-	_, err = Run(repoPath, "stash", "store", "-m", newMessage, hash)
-	return err
+	if !found {
+		return fmt.Errorf("stash %s not found", ref)
+	}
+
+	for range entries {
+		if _, err = Run(repoPath, "stash", "drop", "stash@{0}"); err != nil {
+			return err
+		}
+	}
+
+	for i := len(entries) - 1; i >= 0; i-- {
+		if _, err = Run(repoPath, "stash", "store", "-m", entries[i].msg, entries[i].hash); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func Stash(repoPath string) error {

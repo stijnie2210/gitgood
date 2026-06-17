@@ -29,6 +29,9 @@ func CreateTag(repoPath, name, hash string) error {
 }
 
 func MoveTag(repoPath, name, hash string) error {
+	if _, err := Run(repoPath, "rev-parse", "refs/tags/"+name); err != nil {
+		return fmt.Errorf("tag %q does not exist", name)
+	}
 	_, err := Run(repoPath, "tag", "-f", name, hash)
 	return err
 }

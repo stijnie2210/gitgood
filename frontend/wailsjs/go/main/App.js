@@ -66,6 +66,10 @@ export function FetchAll(arg1) {
   return window['go']['main']['App']['FetchAll'](arg1);
 }
 
+export function ForcePushTag(arg1, arg2) {
+  return window['go']['main']['App']['ForcePushTag'](arg1, arg2);
+}
+
 export function GetAheadBehind(arg1) {
   return window['go']['main']['App']['GetAheadBehind'](arg1);
 }

@@ -26,16 +26,9 @@ func getCommitGraphShell(repoPath string, limit int) ([]graph.GraphRow, error) {
 	labelMap := buildLabelMapShell(repoPath)
 	stashWIP, stashInternal := getStashGraph(repoPath)
 
-	logArgs := []string{"log", "--all", "--date-order",
+	result, err := gitcli.Run(repoPath, "log", "--all", "--date-order",
 		fmt.Sprintf("-n%d", limit),
-		"--pretty=format:%H\t%P\t%an\t%ai\t%s"}
-	if len(stashWIP) > 0 {
-		logArgs = []string{"log", "refs/stash", "--all", "--date-order",
-			fmt.Sprintf("-n%d", limit),
-			"--pretty=format:%H\t%P\t%an\t%ai\t%s"}
-	}
-
-	result, err := gitcli.Run(repoPath, logArgs...)
+		"--pretty=format:%H\t%P\t%an\t%ai\t%s")
 	if err != nil {
 		return nil, fmt.Errorf("git log: %w", err)
 	}

@@ -10,6 +10,7 @@ import {
   CreateTag,
   MoveTag,
   PushTag,
+  ForcePushTag,
   ResetBranch,
 } from '../../../wailsjs/go/main/App';
 
@@ -30,6 +31,7 @@ const toast = useToastStore();
 type Mode = 'menu' | 'branch' | 'tag' | 'move-tag' | 'tag-created' | 'revert-confirm';
 const mode = ref<Mode>('menu');
 const inputVal = ref('');
+const tagMoved = ref(false);
 const inputEl = ref<HTMLInputElement | null>(null);
 const menuEl = ref<HTMLElement | null>(null);
 
@@ -136,12 +138,14 @@ async function reset(resetMode: 'soft' | 'mixed' | 'hard') {
 
 function openTagInput() {
   mode.value = 'tag';
+  tagMoved.value = false;
   inputVal.value = '';
   nextTick(() => inputEl.value?.focus());
 }
 
 function openMoveTagInput() {
   mode.value = 'move-tag';
+  tagMoved.value = true;
   inputVal.value = '';
   nextTick(() => inputEl.value?.focus());
 }
@@ -179,7 +183,11 @@ async function confirmTag() {
 async function pushCreatedTag() {
   const name = inputVal.value.trim();
   try {
-    await PushTag(props.repoPath, name);
+    if (tagMoved.value) {
+      await ForcePushTag(props.repoPath, name);
+    } else {
+      await PushTag(props.repoPath, name);
+    }
     toast.success(`Tag '${name}' pushed`);
   } catch (e) {
     toast.error(String(e));
@@ -263,7 +271,7 @@ async function pushTag(name: string) {
 
     <!-- ── Tag created ────────────────────────────── -->
     <template v-else-if="mode === 'tag-created'">
-      <div class="ctx-input-header">Tag '{{ inputVal }}' created</div>
+      <div class="ctx-input-header">Tag '{{ inputVal }}' {{ tagMoved ? 'moved' : 'created' }}</div>
       <div class="ctx-confirm-row">
         <button class="ctx-confirm-btn ctx-confirm-btn--yes" @click="pushCreatedTag">
           Push tag
