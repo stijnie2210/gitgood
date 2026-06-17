@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=GitGood
+Exec=gitgood
+Icon=gitgood
+Type=Application
+Categories=Development;
+Terminal=false

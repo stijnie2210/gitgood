@@ -27,12 +27,24 @@ jobs:
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
       - name: Build
         run: wails build -platform linux/amd64 -tags webkit2_41
-      - name: Tar binary
-        run: tar -czf gitgood-linux-amd64.tar.gz -C build/bin gitgood
+      - name: Download linuxdeploy
+        run: |
+          wget -q -O linuxdeploy "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage"
+          chmod +x linuxdeploy
+      - name: Create AppImage
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: 1
+        run: |
+          mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/1024x1024/apps
+          cp build/bin/gitgood AppDir/usr/bin/gitgood
+          cp build/appicon.png AppDir/usr/share/icons/hicolor/1024x1024/apps/gitgood.png
+          cp build/linux/gitgood.desktop AppDir/usr/share/applications/gitgood.desktop
+          ./linuxdeploy --appdir AppDir --output appimage
+          mv *x86_64.AppImage gitgood-linux-amd64.AppImage
       - uses: actions/upload-artifact@v4
         with:
           name: gitgood-linux-amd64
-          path: gitgood-linux-amd64.tar.gz
+          path: gitgood-linux-amd64.AppImage
       - uses: softprops/action-gh-release@v2
         with:
-          files: gitgood-linux-amd64.tar.gz
+          files: gitgood-linux-amd64.AppImage
