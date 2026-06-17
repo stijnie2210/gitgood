@@ -2,6 +2,7 @@ import eslint from '@eslint/js'
 import tseslint from 'typescript-eslint'
 import pluginVue from 'eslint-plugin-vue'
 import globals from 'globals'
+import prettier from 'eslint-config-prettier'
 
 export default tseslint.config(
   { ignores: ['src/vite-env.d.ts'] },
@@ -18,7 +19,6 @@ export default tseslint.config(
     },
     rules: {
       curly: ['error', 'all'],
-      semi: ['error', 'always'],
       'vue/max-attributes-per-line': 'off',
       'vue/singleline-html-element-content-newline': 'off',
       'vue/multiline-html-element-content-newline': 'off',
@@ -26,4 +26,5 @@ export default tseslint.config(
       'vue/multi-word-component-names': 'off',
     },
   },
+  prettier,
 )
