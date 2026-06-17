@@ -12,7 +12,29 @@ A desktop Git client built as a single binary using [Wails v2](https://wails.io)
 - **Remote operations** — fetch, pull, push with SSH agent support
 - **Recent repositories** — persisted to `~/Library/Application Support/gitgood/repos.json`
 
-## Requirements
+## Installing (Linux)
+
+The AppImage release requires WebKit2GTK 4.1. Install it before running:
+
+```bash
+# Fedora / RHEL
+sudo dnf install webkit2gtk4.1
+
+# Ubuntu / Debian
+sudo apt install libwebkit2gtk-4.1-0
+
+# Arch Linux
+sudo pacman -S webkit2gtk-4.1
+```
+
+Then make the AppImage executable and run it:
+
+```bash
+chmod +x gitgood-linux-amd64.AppImage
+./gitgood-linux-amd64.AppImage
+```
+
+## Requirements (building from source)
 
 - Go 1.24+
 - [Wails CLI](https://wails.io/docs/gettingstarted/installation) v2
