@@ -4,18 +4,33 @@ import (
 	"embed"
 
 	"github.com/wailsapp/wails/v2"
+	"github.com/wailsapp/wails/v2/pkg/menu"
+	"github.com/wailsapp/wails/v2/pkg/menu/keys"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 //go:embed all:frontend/dist
 var assets embed.FS
 
 func main() {
-	// Create an instance of the app structure
 	app := NewApp()
 
-	// Create application with options
+	appMenu := menu.NewMenu()
+	gitgoodMenu := appMenu.AddSubmenu("gitgood")
+	gitgoodMenu.AddText("Preferences…", keys.CmdOrCtrl(","), func(_ *menu.CallbackData) {
+		if app.ctx != nil {
+			runtime.EventsEmit(app.ctx, "open-preferences")
+		}
+	})
+	gitgoodMenu.AddSeparator()
+	gitgoodMenu.AddText("Quit gitgood", keys.CmdOrCtrl("q"), func(_ *menu.CallbackData) {
+		if app.ctx != nil {
+			runtime.Quit(app.ctx)
+		}
+	})
+
 	err := wails.Run(&options.App{
 		Title:  "gitgood",
 		Width:  1440,
@@ -24,6 +39,7 @@ func main() {
 			Assets: assets,
 		},
 		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
+		Menu:             appMenu,
 		OnStartup:        app.startup,
 		OnBeforeClose:    app.beforeClose,
 		Bind: []interface{}{

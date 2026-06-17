@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref, watchEffect } from 'vue';
+import { ref, watchEffect, computed } from 'vue';
 import type { GraphRow } from '../../stores/commits';
 import { drawGraphCell } from './graphRenderer';
+import { usePrefsStore } from '../../stores/prefs';
+import { formatDate } from '../../utils/date';
 
 const props = defineProps<{
   row: GraphRow;
@@ -9,6 +11,15 @@ const props = defineProps<{
   rowH: number;
   selected: boolean;
 }>();
+
+const prefsStore = usePrefsStore();
+
+const displayDate = computed(() => {
+  if (!props.row.timestamp) {
+    return props.row.date;
+  }
+  return formatDate(props.row.timestamp, prefsStore.prefs.dateFormat, prefsStore.now);
+});
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 
@@ -41,7 +52,7 @@ watchEffect(() => {
     </span>
     <span class="row-subject">{{ row.subject }}</span>
     <span class="row-author">{{ row.author }}</span>
-    <span class="row-date">{{ row.date }}</span>
+    <span class="row-date">{{ displayDate }}</span>
   </div>
 </template>
 

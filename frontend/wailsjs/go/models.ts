@@ -65,6 +65,7 @@ export namespace graph {
 	    subject: string;
 	    author: string;
 	    date: string;
+	    timestamp: number;
 	    parentHashes: string[];
 	    labels: Label[];
 	    column: number;
@@ -84,6 +85,7 @@ export namespace graph {
 	        this.subject = source["subject"];
 	        this.author = source["author"];
 	        this.date = source["date"];
+	        this.timestamp = source["timestamp"];
 	        this.parentHashes = source["parentHashes"];
 	        this.labels = this.convertValues(source["labels"], Label);
 	        this.column = source["column"];
@@ -147,6 +149,28 @@ export namespace repo {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.ahead = source["ahead"];
 	        this.behind = source["behind"];
+	    }
+	}
+	export class AppPrefs {
+	    editor: string;
+	    autoFetchEnabled: boolean;
+	    autoFetchIntervalSecs: number;
+	    commitGraphLimit: number;
+	    diffContextLines: number;
+	    dateFormat: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AppPrefs(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.editor = source["editor"];
+	        this.autoFetchEnabled = source["autoFetchEnabled"];
+	        this.autoFetchIntervalSecs = source["autoFetchIntervalSecs"];
+	        this.commitGraphLimit = source["commitGraphLimit"];
+	        this.diffContextLines = source["diffContextLines"];
+	        this.dateFormat = source["dateFormat"];
 	    }
 	}
 	export class BranchInfo {

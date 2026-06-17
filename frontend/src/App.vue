@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch, type Ref, computed } from 'vue';
+import { EventsOn, EventsOff } from '../wailsjs/runtime/runtime';
 import { useDetailWidth } from './composables/useDetailWidth';
 import TabBar from './components/layout/TabBar.vue';
 import ToolBar from './components/layout/ToolBar.vue';
@@ -9,17 +10,21 @@ import CommitDetail from './components/graph/CommitDetail.vue';
 import FileDiffView from './components/graph/FileDiffView.vue';
 import StagingView from './components/staging/StagingView.vue';
 import ToastStack from './components/layout/ToastStack.vue';
+import PreferencesModal from './components/layout/PreferencesModal.vue';
 import { useReposStore } from './stores/repos';
 import { useCommitsStore } from './stores/commits';
 import { useStagingStore } from './stores/staging';
 import { useBranchesStore } from './stores/branches';
+import { usePrefsStore } from './stores/prefs';
 import logoUrl from './assets/images/logo-icon.png';
 
 const repos = useReposStore();
 const commits = useCommitsStore();
 const staging = useStagingStore();
 const branches = useBranchesStore();
+const prefsStore = usePrefsStore();
 onMounted(async () => {
+  await prefsStore.load();
   await repos.restoreSession();
   repos.loadRecents();
 });
@@ -37,24 +42,25 @@ watch(
   { immediate: true }
 );
 
-const FETCH_POLL_MS = 60_000;
 let fetchPollTimer: ReturnType<typeof setInterval> | null = null;
 
-watch(
-  () => repos.activeRepo?.path,
-  (path) => {
-    if (fetchPollTimer !== null) {
-      clearInterval(fetchPollTimer);
-      fetchPollTimer = null;
-    }
-    if (!path) {
-      return;
-    }
+function restartFetchTimer(path: string | undefined) {
+  if (fetchPollTimer !== null) {
+    clearInterval(fetchPollTimer);
+    fetchPollTimer = null;
+  }
+  if (!path || !prefsStore.prefs.autoFetchEnabled) {
+    return;
+  }
+  branches.silentFetchAndRefresh(path);
+  fetchPollTimer = setInterval(() => {
     branches.silentFetchAndRefresh(path);
-    fetchPollTimer = setInterval(() => {
-      branches.silentFetchAndRefresh(path);
-    }, FETCH_POLL_MS);
-  },
+  }, prefsStore.prefs.autoFetchIntervalSecs * 1000);
+}
+
+watch(
+  [() => repos.activeRepo?.path, () => prefsStore.prefs.autoFetchEnabled, () => prefsStore.prefs.autoFetchIntervalSecs],
+  ([path]) => restartFetchTimer(path as string | undefined),
   { immediate: true }
 );
 
@@ -144,11 +150,20 @@ function onGlobalKeyDown(e: KeyboardEvent) {
   } else if (e.key === 'o') {
     e.preventDefault();
     repos.pickAndOpen();
+  } else if (e.key === ',') {
+    e.preventDefault();
+    prefsStore.openModal();
   }
 }
 
-onMounted(() => window.addEventListener('keydown', onGlobalKeyDown));
-onUnmounted(() => window.removeEventListener('keydown', onGlobalKeyDown));
+onMounted(() => {
+  window.addEventListener('keydown', onGlobalKeyDown);
+  EventsOn('open-preferences', () => prefsStore.openModal());
+});
+onUnmounted(() => {
+  window.removeEventListener('keydown', onGlobalKeyDown);
+  EventsOff('open-preferences');
+});
 </script>
 
 <template>
@@ -156,6 +171,7 @@ onUnmounted(() => window.removeEventListener('keydown', onGlobalKeyDown));
     <TabBar />
     <ToolBar />
     <ToastStack />
+    <PreferencesModal />
     <div class="workspace">
       <Sidebar :style="{ width: sidebarWidth + 'px' }" />
       <div class="resize-handle" @mousedown.prevent="startSidebarResize" />

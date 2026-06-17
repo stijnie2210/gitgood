@@ -67,6 +67,7 @@ func getCommitGraphShell(repoPath string, limit int) ([]graph.GraphRow, error) {
 			Subject:      parts[4],
 			Author:       parts[2],
 			Date:         dateStr,
+			Timestamp:    t.Unix(),
 			ParentHashes: parents,
 		})
 	}
@@ -205,7 +206,9 @@ func (m *Manager) GetCommitDiff(repoPath, hash string) ([]FileDiff, error) {
 
 
 func getCommitDiffShell(repoPath, hash string) ([]FileDiff, error) {
-	result, err := gitcli.Run(repoPath, "diff-tree", "--no-commit-id", "-p", "--root", "-U3", hash)
+	prefs, _ := LoadPrefs()
+	ctx := fmt.Sprintf("-U%d", prefs.DiffContextLines)
+	result, err := gitcli.Run(repoPath, "diff-tree", "--no-commit-id", "-p", "--root", ctx, hash)
 	if err != nil {
 		return nil, fmt.Errorf("git diff-tree: %w", err)
 	}
@@ -214,7 +217,7 @@ func getCommitDiffShell(repoPath, hash string) ([]FileDiff, error) {
 	}
 	// Stash and merge commits have multiple parents; diff-tree produces no output without -m.
 	// Fall back to first-parent comparison so the viewer shows something useful.
-	result, err = gitcli.Run(repoPath, "diff-tree", "--no-commit-id", "-p", "--root", "-U3", "-m", "--first-parent", hash)
+	result, err = gitcli.Run(repoPath, "diff-tree", "--no-commit-id", "-p", "--root", ctx, "-m", "--first-parent", hash)
 	if err != nil || result.Stdout == "" {
 		return []FileDiff{}, nil
 	}

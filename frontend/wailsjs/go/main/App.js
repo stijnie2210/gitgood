@@ -102,6 +102,10 @@ export function GetMergeMessage(arg1) {
   return window['go']['main']['App']['GetMergeMessage'](arg1);
 }
 
+export function GetPrefs() {
+  return window['go']['main']['App']['GetPrefs']();
+}
+
 export function GetRebaseState(arg1) {
   return window['go']['main']['App']['GetRebaseState'](arg1);
 }
@@ -208,6 +212,10 @@ export function RevertCommit(arg1, arg2, arg3) {
 
 export function SavePatchFile(arg1, arg2) {
   return window['go']['main']['App']['SavePatchFile'](arg1, arg2);
+}
+
+export function SavePrefs(arg1) {
+  return window['go']['main']['App']['SavePrefs'](arg1);
 }
 
 export function SaveSession(arg1, arg2) {

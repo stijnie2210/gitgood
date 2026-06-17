@@ -276,7 +276,16 @@ func (a *App) ShowInFinder(repoPath, filePath string) error {
 }
 
 func (a *App) OpenInEditor(repoPath, filePath string) error {
-	return gitcli.OpenInEditor(repoPath, filePath)
+	prefs, _ := repo.LoadPrefs()
+	return gitcli.OpenInEditor(repoPath, filePath, prefs.Editor)
+}
+
+func (a *App) GetPrefs() (repo.AppPrefs, error) {
+	return repo.LoadPrefs()
+}
+
+func (a *App) SavePrefs(prefs repo.AppPrefs) error {
+	return repo.SavePrefs(prefs)
 }
 
 func (a *App) StashFile(repoPath, filePath string) error {

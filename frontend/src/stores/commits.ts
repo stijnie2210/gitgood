@@ -2,11 +2,11 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { GetCommitGraph, GetCommitDiff } from '../../wailsjs/go/main/App';
 import type { graph, repo } from '../../wailsjs/go/models';
+import { usePrefsStore } from './prefs';
 
 export type GraphRow = graph.GraphRow;
 export type FileDiff = repo.FileDiff;
 
-const INITIAL_LIMIT = 2000;
 const BATCH_SIZE = 2000;
 
 export const useCommitsStore = defineStore('commits', () => {
@@ -14,7 +14,7 @@ export const useCommitsStore = defineStore('commits', () => {
   const loading = ref(false);
   const loadingMore = ref(false);
   const hasMore = ref(false);
-  const loadedLimit = ref(INITIAL_LIMIT);
+  const loadedLimit = ref(0);
   const error = ref<string | null>(null);
   const selectedHash = ref<string | null>(null);
   const selectedFileIndex = ref<number | null>(null);
@@ -28,17 +28,18 @@ export const useCommitsStore = defineStore('commits', () => {
     if (!repoPath) {
       return;
     }
+    const initialLimit = usePrefsStore().prefs.commitGraphLimit;
     loading.value = true;
-    loadedLimit.value = INITIAL_LIMIT;
+    loadedLimit.value = initialLimit;
     hasMore.value = false;
     error.value = null;
     selectedHash.value = null;
     diff.value = [];
     currentRepoPath.value = repoPath;
     try {
-      const result = await GetCommitGraph(repoPath, INITIAL_LIMIT);
+      const result = await GetCommitGraph(repoPath, initialLimit);
       rows.value = result;
-      hasMore.value = result.length === INITIAL_LIMIT;
+      hasMore.value = result.length === initialLimit;
     } catch (e) {
       error.value = String(e);
       rows.value = [];

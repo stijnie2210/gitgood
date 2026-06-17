@@ -16,8 +16,12 @@ func ShowInFinder(repoPath, filePath string) error {
 	return exec.Command("open", "-R", filepath.Join(repoPath, filePath)).Start()
 }
 
-func OpenInEditor(repoPath, filePath string) error {
+func OpenInEditor(repoPath, filePath, preferredEditor string) error {
 	full := filepath.Join(repoPath, filePath)
+	if preferredEditor != "" {
+		parts := strings.Fields(preferredEditor)
+		return exec.Command(parts[0], append(parts[1:], full)...).Start()
+	}
 	for _, env := range []string{"VISUAL", "EDITOR"} {
 		if e := os.Getenv(env); e != "" {
 			parts := strings.Fields(e)

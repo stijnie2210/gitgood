@@ -1,13 +1,27 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useCommitsStore } from '../../stores/commits';
+import { usePrefsStore } from '../../stores/prefs';
+import { formatDate } from '../../utils/date';
 import CommitFileList from './CommitFileList.vue';
 
 const commits = useCommitsStore();
+const prefsStore = usePrefsStore();
 
 const selectedRow = computed(
   () => commits.rows.find((r) => r.hash === commits.selectedHash) ?? null
 );
+
+const displayDate = computed(() => {
+  const row = selectedRow.value;
+  if (!row) {
+    return '';
+  }
+  if (!row.timestamp) {
+    return row.date;
+  }
+  return formatDate(row.timestamp, prefsStore.prefs.dateFormat, prefsStore.now);
+});
 </script>
 
 <template>
@@ -26,7 +40,7 @@ const selectedRow = computed(
       <div class="meta-subject">{{ selectedRow.subject }}</div>
       <div class="meta-info">
         <span>{{ selectedRow.author }}</span>
-        <span>{{ selectedRow.date }}</span>
+        <span>{{ displayDate }}</span>
       </div>
     </div>
 

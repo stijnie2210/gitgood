@@ -55,6 +55,8 @@ export function GetLastCommitSubject(arg1:string):Promise<string>;
 
 export function GetMergeMessage(arg1:string):Promise<string>;
 
+export function GetPrefs():Promise<repo.AppPrefs>;
+
 export function GetRebaseState(arg1:string):Promise<repo.RebaseState>;
 
 export function GetStatus(arg1:string):Promise<Array<repo.FileStatus>>;
@@ -108,6 +110,8 @@ export function ResolveConflict(arg1:string,arg2:string,arg3:string):Promise<voi
 export function RevertCommit(arg1:string,arg2:string,arg3:boolean):Promise<void>;
 
 export function SavePatchFile(arg1:string,arg2:string):Promise<void>;
+
+export function SavePrefs(arg1:repo.AppPrefs):Promise<void>;
 
 export function SaveSession(arg1:Array<repo.SessionTab>,arg2:number):Promise<void>;
 

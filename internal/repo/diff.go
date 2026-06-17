@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -56,11 +57,14 @@ func parseGitStatus(output string) []FileStatus {
 }
 
 func (m *Manager) GetWorkingDiff(repoPath, path string, staged bool) ([]FileDiff, error) {
+	prefs, _ := LoadPrefs()
+	ctx := fmt.Sprintf("-U%d", prefs.DiffContextLines)
+
 	if !staged {
 		// Check for untracked file: diff against /dev/null
 		st, _ := gitcli.Run(repoPath, "status", "--porcelain", "--", path)
 		if len(st.Stdout) >= 2 && st.Stdout[0] == '?' {
-			result, err := gitcli.Run(repoPath, "diff", "--no-index", "/dev/null", path)
+			result, err := gitcli.Run(repoPath, "diff", "--no-index", ctx, "/dev/null", path)
 			if err != nil {
 				// exit code 1 = differences found — not an error for --no-index
 				if e, ok := err.(*gitcli.ExitError); ok && e.Code == 1 {
@@ -76,9 +80,9 @@ func (m *Manager) GetWorkingDiff(repoPath, path string, staged bool) ([]FileDiff
 
 	var args []string
 	if staged {
-		args = []string{"diff", "--cached", "--", path}
+		args = []string{"diff", "--cached", ctx, "--", path}
 	} else {
-		args = []string{"diff", "--", path}
+		args = []string{"diff", ctx, "--", path}
 	}
 	result, err := gitcli.Run(repoPath, args...)
 	if err != nil {

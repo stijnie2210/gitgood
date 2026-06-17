@@ -22,6 +22,7 @@ type CommitNode struct {
 	Subject      string
 	Author       string
 	Date         string
+	Timestamp    int64
 	ParentHashes []string
 }
 
@@ -31,6 +32,7 @@ type GraphRow struct {
 	Subject      string      `json:"subject"`
 	Author       string      `json:"author"`
 	Date         string      `json:"date"`
+	Timestamp    int64       `json:"timestamp"`
 	ParentHashes []string    `json:"parentHashes"`
 	Labels       []Label     `json:"labels"`
 	Column       int         `json:"column"`
@@ -133,6 +135,7 @@ func BuildGraph(commits []CommitNode, labelMap map[string][]Label) []GraphRow {
 			Subject:      c.Subject,
 			Author:       c.Author,
 			Date:         c.Date,
+			Timestamp:    c.Timestamp,
 			ParentHashes: c.ParentHashes,
 			Labels:       labels,
 			Column:       col,

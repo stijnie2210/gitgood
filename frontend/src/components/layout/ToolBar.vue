@@ -13,8 +13,10 @@ import {
   CreateBranch,
   OpenTerminal,
 } from '../../../wailsjs/go/main/App';
+import { usePrefsStore } from '../../stores/prefs';
 
 const repos = useReposStore();
+const prefsStore = usePrefsStore();
 const commits = useCommitsStore();
 const staging = useStagingStore();
 const branches = useBranchesStore();
@@ -155,6 +157,7 @@ async function confirmBranch() {
 <template>
   <div class="toolbar">
     <div class="toolbar-inner">
+      <div class="toolbar-side" />
       <!-- Remote ops group -->
       <div class="btn-group">
         <button
@@ -351,6 +354,29 @@ async function confirmBranch() {
           <span class="tbtn-label">Terminal</span>
         </button>
       </div>
+
+      <div class="toolbar-side toolbar-side--right">
+        <div class="btn-group">
+          <button class="tbtn" @click="prefsStore.openModal()">
+            <span class="tbtn-icon">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </span>
+            <span class="tbtn-label">Settings</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -366,10 +392,18 @@ async function confirmBranch() {
 .toolbar-inner {
   display: flex;
   align-items: center;
-  justify-content: center;
   height: 48px;
   padding: 0 8px;
   gap: 2px;
+}
+
+.toolbar-side {
+  flex: 1;
+}
+
+.toolbar-side--right {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .btn-group {
