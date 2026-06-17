@@ -297,7 +297,9 @@ function onOverlayClick(e: MouseEvent) {
 .prefs-select {
   appearance: none;
   -webkit-appearance: none;
-  background: #12122a url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23556' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 10px center;
+  background: #12122a
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' fill='none' stroke='%23556' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    no-repeat right 10px center;
   border: 1px solid #252545;
   border-radius: 6px;
   color: #ccd;
@@ -329,7 +331,9 @@ function onOverlayClick(e: MouseEvent) {
   color: #667;
   font-size: 11px;
   cursor: pointer;
-  transition: color 0.1s, border-color 0.1s;
+  transition:
+    color 0.1s,
+    border-color 0.1s;
 }
 .preset-btn:hover {
   color: #99a;
@@ -360,7 +364,9 @@ function onOverlayClick(e: MouseEvent) {
   border: 1px solid #2d2d50;
   border-radius: 9px;
   position: relative;
-  transition: background 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
 }
 .toggle input:checked + .toggle-track {
   background: #4f8ef7;
@@ -374,7 +380,9 @@ function onOverlayClick(e: MouseEvent) {
   border-radius: 50%;
   top: 2px;
   left: 2px;
-  transition: left 0.15s, background 0.15s;
+  transition:
+    left 0.15s,
+    background 0.15s;
 }
 .toggle input:checked + .toggle-track .toggle-thumb {
   left: 18px;

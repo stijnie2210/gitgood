@@ -59,7 +59,11 @@ function restartFetchTimer(path: string | undefined) {
 }
 
 watch(
-  [() => repos.activeRepo?.path, () => prefsStore.prefs.autoFetchEnabled, () => prefsStore.prefs.autoFetchIntervalSecs],
+  [
+    () => repos.activeRepo?.path,
+    () => prefsStore.prefs.autoFetchEnabled,
+    () => prefsStore.prefs.autoFetchIntervalSecs,
+  ],
   ([path]) => restartFetchTimer(path as string | undefined),
   { immediate: true }
 );
