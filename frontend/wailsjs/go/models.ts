@@ -1,3 +1,30 @@
+export namespace gitcli {
+	
+	export class StashEntry {
+	    index: number;
+	    ref: string;
+	    message: string;
+	    branch: string;
+	    hash: string;
+	    date: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new StashEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.index = source["index"];
+	        this.ref = source["ref"];
+	        this.message = source["message"];
+	        this.branch = source["branch"];
+	        this.hash = source["hash"];
+	        this.date = source["date"];
+	    }
+	}
+
+}
+
 export namespace graph {
 	
 	export class GraphEdge {

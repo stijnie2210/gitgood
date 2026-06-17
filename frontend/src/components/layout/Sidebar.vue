@@ -6,11 +6,17 @@ import { useBranchesStore } from '../../stores/branches';
 import { useCommitsStore } from '../../stores/commits';
 import { useStagingStore } from '../../stores/staging';
 import { useToastStore } from '../../stores/toast';
+import { useStashStore } from '../../stores/stash';
+import type { StashEntry } from '../../stores/stash';
 import {
   StartRebase,
   DeleteBranch,
   RenameBranch,
   PushNamedBranch,
+  ApplyStash,
+  DropStash,
+  PopStash,
+  RenameStash,
 } from '../../../wailsjs/go/main/App';
 
 defineOptions({ inheritAttrs: false });
@@ -20,14 +26,86 @@ const branches = useBranchesStore();
 const commits = useCommitsStore();
 const staging = useStagingStore();
 const toast = useToastStore();
+const stash = useStashStore();
+
+interface CollapsedState {
+  local: boolean;
+  remote: boolean;
+  stashes: boolean;
+}
+
+const collapsed = ref<CollapsedState>({ local: false, remote: false, stashes: false });
+const remoteHeight = ref(200);
+
+function prefsKey(repoPath: string) {
+  return `gitgood:sidebar:prefs:${repoPath}`;
+}
+
+function loadPrefs(repoPath: string) {
+  try {
+    const raw = localStorage.getItem(prefsKey(repoPath));
+    if (raw) {
+      const p = JSON.parse(raw);
+      collapsed.value = { local: !!p.local, remote: !!p.remote, stashes: !!p.stashes };
+      remoteHeight.value = typeof p.remoteHeight === 'number' ? p.remoteHeight : 200;
+      return;
+    }
+  } catch {
+    // ignore malformed saved prefs
+  }
+  collapsed.value = { local: false, remote: false, stashes: false };
+  remoteHeight.value = 200;
+}
+
+function savePrefs(repoPath: string) {
+  localStorage.setItem(
+    prefsKey(repoPath),
+    JSON.stringify({ ...collapsed.value, remoteHeight: remoteHeight.value })
+  );
+}
+
+function toggleSection(section: keyof CollapsedState) {
+  collapsed.value[section] = !collapsed.value[section];
+  const repoPath = repos.activeRepo?.path;
+  if (repoPath) {
+    savePrefs(repoPath);
+  }
+}
+
+function onSectionDividerDown(e: MouseEvent) {
+  e.preventDefault();
+  const startY = e.clientY;
+  const startRemote = remoteHeight.value;
+
+  function onMove(ev: MouseEvent) {
+    remoteHeight.value = Math.max(60, startRemote + (ev.clientY - startY));
+  }
+
+  function onUp() {
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('mouseup', onUp);
+    const repoPath = repos.activeRepo?.path;
+    if (repoPath) {
+      savePrefs(repoPath);
+    }
+  }
+
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+}
 
 watch(
   () => repos.activeRepo?.path,
   (path) => {
     if (path) {
       branches.load(path);
+      stash.load(path);
+      loadPrefs(path);
     } else {
       branches.clear();
+      stash.clear();
+      collapsed.value = { local: false, remote: false, stashes: false };
+      remoteHeight.value = 200;
     }
   },
   { immediate: true }
@@ -112,6 +190,9 @@ function closeCtxMenu() {
 function onWindowMouseDown(e: MouseEvent) {
   if (branchCtxMenuEl.value && !branchCtxMenuEl.value.contains(e.target as Node)) {
     closeCtxMenu();
+  }
+  if (stashCtxMenuEl.value && !stashCtxMenuEl.value.contains(e.target as Node)) {
+    closeStashCtxMenu();
   }
 }
 
@@ -225,6 +306,154 @@ async function confirmDelete(force: boolean) {
     }
   }
 }
+
+// ── Stash ─────────────────────────────────────────────────────────────────
+
+async function selectStash(entry: StashEntry) {
+  const repoPath = repos.activeRepo?.path;
+  if (!repoPath) {
+    return;
+  }
+  await commits.selectCommit(repoPath, entry.hash);
+}
+
+function stashDisplayMsg(entry: StashEntry): string {
+  // "WIP on main: abc1234 actual message" → "main: actual message"
+  // "On main: abc1234 actual message" → "main: actual message"
+  // custom message → returned as-is
+  const wip = entry.message.match(/^(?:WIP )?[Oo]n ([^:]+): [0-9a-f]{7,}\s+(.+)$/);
+  if (wip) {
+    return wip[1] + ': ' + wip[2];
+  }
+  return entry.message;
+}
+
+type StashCtxMode = 'default' | 'rename' | 'confirm-drop';
+
+interface StashCtxMenu {
+  x: number;
+  y: number;
+  ref: string;
+  hash: string;
+  message: string;
+  mode: StashCtxMode;
+  renameValue: string;
+}
+
+const stashCtxMenu = ref<StashCtxMenu | null>(null);
+const stashRenameInputRef = ref<HTMLInputElement | null>(null);
+const stashCtxMenuEl = ref<HTMLElement | null>(null);
+
+async function openStashCtxMenu(e: MouseEvent, entry: StashEntry) {
+  e.preventDefault();
+  e.stopPropagation();
+  stashCtxMenu.value = {
+    x: e.clientX,
+    y: e.clientY,
+    ref: entry.ref,
+    hash: entry.hash,
+    message: entry.message,
+    mode: 'default',
+    renameValue: entry.message,
+  };
+  await nextTick();
+  const menu = stashCtxMenuEl.value;
+  if (menu && stashCtxMenu.value) {
+    const { x, y } = clampMenuPosition(menu, e.clientX, e.clientY);
+    stashCtxMenu.value = { ...stashCtxMenu.value, x, y };
+  }
+}
+
+function closeStashCtxMenu() {
+  stashCtxMenu.value = null;
+}
+
+async function applyStash() {
+  const menu = stashCtxMenu.value;
+  const repoPath = repos.activeRepo?.path;
+  closeStashCtxMenu();
+  if (!menu || !repoPath) {
+    return;
+  }
+  try {
+    await ApplyStash(repoPath, menu.ref);
+    await Promise.all([stash.load(repoPath), staging.load(repoPath)]);
+    toast.success('Applied ' + menu.ref);
+  } catch (e: unknown) {
+    toast.error(String(e));
+  }
+}
+
+async function popStash() {
+  const menu = stashCtxMenu.value;
+  const repoPath = repos.activeRepo?.path;
+  closeStashCtxMenu();
+  if (!menu || !repoPath) {
+    return;
+  }
+  try {
+    await PopStash(repoPath, menu.ref);
+    await Promise.all([stash.load(repoPath), staging.load(repoPath), commits.load(repoPath)]);
+    toast.success('Popped ' + menu.ref);
+  } catch (e: unknown) {
+    toast.error(String(e));
+  }
+}
+
+function startStashDrop() {
+  if (!stashCtxMenu.value) {
+    return;
+  }
+  stashCtxMenu.value.mode = 'confirm-drop';
+}
+
+async function confirmStashDrop() {
+  const menu = stashCtxMenu.value;
+  const repoPath = repos.activeRepo?.path;
+  closeStashCtxMenu();
+  if (!menu || !repoPath) {
+    return;
+  }
+  try {
+    await DropStash(repoPath, menu.ref);
+    await Promise.all([stash.load(repoPath), commits.load(repoPath)]);
+    toast.success('Dropped ' + menu.ref);
+  } catch (e: unknown) {
+    toast.error(String(e));
+  }
+}
+
+function startStashRename() {
+  if (!stashCtxMenu.value) {
+    return;
+  }
+  stashCtxMenu.value.mode = 'rename';
+  nextTick(() => {
+    stashRenameInputRef.value?.select();
+  });
+}
+
+async function confirmStashRename() {
+  const menu = stashCtxMenu.value;
+  const repoPath = repos.activeRepo?.path;
+  if (!menu || !repoPath) {
+    closeStashCtxMenu();
+    return;
+  }
+  const newMessage = menu.renameValue.trim();
+  if (!newMessage || newMessage === menu.message) {
+    closeStashCtxMenu();
+    return;
+  }
+  closeStashCtxMenu();
+  try {
+    await RenameStash(repoPath, menu.ref, newMessage);
+    await Promise.all([stash.load(repoPath), commits.load(repoPath)]);
+    toast.success('Renamed stash');
+  } catch (e: unknown) {
+    toast.error(String(e));
+  }
+}
 </script>
 
 <template>
@@ -234,10 +463,13 @@ async function confirmDelete(force: boolean) {
       <button @click="repos.pickAndOpen()">Open Repository</button>
     </div>
 
-    <template v-else>
+    <div v-else class="sidebar-content">
       <section class="branch-section">
-        <h3 class="section-title">Local Branches</h3>
-        <ul class="branch-list">
+        <h3 class="section-title section-title--toggle" @click="toggleSection('local')">
+          <span class="section-chevron">{{ collapsed.local ? '▸' : '▾' }}</span>
+          Local Branches
+        </h3>
+        <ul v-if="!collapsed.local" class="branch-list">
           <li
             v-for="b in branches.local"
             :key="b.name"
@@ -268,8 +500,15 @@ async function confirmDelete(force: boolean) {
       </section>
 
       <section class="branch-section">
-        <h3 class="section-title">Remote Branches</h3>
-        <ul class="branch-list">
+        <h3 class="section-title section-title--toggle" @click="toggleSection('remote')">
+          <span class="section-chevron">{{ collapsed.remote ? '▸' : '▾' }}</span>
+          Remote Branches
+        </h3>
+        <ul
+          v-if="!collapsed.remote"
+          class="branch-list remote-list"
+          :style="{ maxHeight: remoteHeight + 'px' }"
+        >
           <li
             v-for="b in branches.remote"
             :key="`${b.remote}/${b.name}`"
@@ -286,7 +525,32 @@ async function confirmDelete(force: boolean) {
           </li>
         </ul>
       </section>
-    </template>
+
+      <div class="section-divider" @mousedown="onSectionDividerDown" />
+
+      <section class="branch-section stash-section">
+        <h3 class="section-title section-title--toggle" @click="toggleSection('stashes')">
+          <span class="section-chevron">{{ collapsed.stashes ? '▸' : '▾' }}</span>
+          Stashes
+        </h3>
+        <ul v-if="!collapsed.stashes && stash.entries.length > 0" class="branch-list stash-list">
+          <li
+            v-for="entry in stash.entries"
+            :key="entry.ref"
+            class="branch-item stash-item"
+            :class="{ 'stash-selected': commits.selectedHash === entry.hash }"
+            :title="entry.message"
+            @click="selectStash(entry)"
+            @contextmenu="openStashCtxMenu($event, entry)"
+          >
+            <span class="stash-index">{{ entry.index }}</span>
+            <span class="branch-name stash-msg">{{ stashDisplayMsg(entry) }}</span>
+            <span class="stash-date">{{ entry.date }}</span>
+          </li>
+        </ul>
+        <p v-else-if="!collapsed.stashes" class="empty-stash">No stashes</p>
+      </section>
+    </div>
   </aside>
 
   <!-- Context menu (teleported so it renders above sidebar overflow) -->
@@ -363,6 +627,53 @@ async function confirmDelete(force: boolean) {
       </template>
     </div>
   </Teleport>
+
+  <!-- Stash context menu -->
+  <Teleport to="body">
+    <div
+      v-if="stashCtxMenu"
+      ref="stashCtxMenuEl"
+      class="ctx-menu"
+      :style="{ left: stashCtxMenu.x + 'px', top: stashCtxMenu.y + 'px' }"
+    >
+      <div class="ctx-menu-label">{{ stashCtxMenu.ref }}</div>
+
+      <template v-if="stashCtxMenu.mode === 'default'">
+        <button class="ctx-menu-item ctx-menu-item-primary" @click="applyStash()">Apply</button>
+        <button class="ctx-menu-item ctx-menu-item-primary" @click="popStash()">Pop</button>
+        <div class="ctx-menu-divider" />
+        <button class="ctx-menu-item" @click="startStashRename()">Rename</button>
+        <button class="ctx-menu-item ctx-menu-item-danger" @click="startStashDrop()">Drop</button>
+      </template>
+
+      <template v-else-if="stashCtxMenu.mode === 'rename'">
+        <div class="ctx-menu-rename">
+          <input
+            ref="stashRenameInputRef"
+            v-model="stashCtxMenu.renameValue"
+            class="ctx-menu-input"
+            placeholder="Stash message"
+            @keydown.enter="confirmStashRename()"
+            @keydown.esc="closeStashCtxMenu()"
+          />
+          <div class="ctx-menu-row">
+            <button class="ctx-menu-btn-primary" @click="confirmStashRename()">Rename</button>
+            <button class="ctx-menu-btn" @click="closeStashCtxMenu()">Cancel</button>
+          </div>
+        </div>
+      </template>
+
+      <template v-else-if="stashCtxMenu.mode === 'confirm-drop'">
+        <div class="ctx-menu-confirm">
+          <p class="ctx-menu-confirm-text">Drop "{{ stashCtxMenu.ref }}"?</p>
+          <button class="ctx-menu-item ctx-menu-item-danger" @click="confirmStashDrop()">
+            Drop
+          </button>
+          <button class="ctx-menu-item" @click="closeStashCtxMenu()">Cancel</button>
+        </div>
+      </template>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -370,9 +681,17 @@ async function confirmDelete(force: boolean) {
   flex-shrink: 0;
   background: #16213e;
   border-right: 1px solid #2d2d4e;
-  overflow-y: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.sidebar-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .empty-state {
@@ -405,6 +724,24 @@ async function confirmDelete(force: boolean) {
   letter-spacing: 0.08em;
   color: #7a8899;
   margin: 0;
+}
+
+.section-title--toggle {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.section-title--toggle:hover {
+  color: #9aaabb;
+}
+
+.section-chevron {
+  font-size: 9px;
+  flex-shrink: 0;
 }
 
 .branch-list {
@@ -478,6 +815,76 @@ async function confirmDelete(force: boolean) {
 .remote-label {
   color: #7a8899;
   font-size: 11px;
+}
+
+.stash-item {
+  color: #aa88dd;
+}
+.stash-item:hover {
+  background: #1e1a30;
+  color: #cc99ff;
+}
+.stash-item.stash-selected {
+  background: rgba(187, 136, 255, 0.1);
+  color: #cc99ff;
+}
+
+.stash-index {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-family: monospace;
+  color: #6a5888;
+  min-width: 16px;
+  text-align: right;
+}
+
+.stash-msg {
+  flex: 1;
+  font-size: 12px;
+}
+
+.stash-date {
+  font-size: 10px;
+  color: #556;
+  flex-shrink: 0;
+}
+
+.remote-list {
+  overflow-y: auto;
+}
+
+.stash-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.stash-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.section-divider {
+  height: 5px;
+  flex-shrink: 0;
+  cursor: row-resize;
+  background: transparent;
+  border-top: 1px solid #1e1e36;
+  border-bottom: 1px solid #1e1e36;
+}
+
+.section-divider:hover,
+.section-divider:active {
+  background: rgba(79, 142, 247, 0.15);
+}
+
+.empty-stash {
+  padding: 4px 12px;
+  font-size: 11px;
+  color: #445;
+  margin: 0;
 }
 </style>
 

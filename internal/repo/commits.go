@@ -24,10 +24,18 @@ func (m *Manager) GetCommitGraph(repoPath string, limit int) ([]graph.GraphRow, 
 
 func getCommitGraphShell(repoPath string, limit int) ([]graph.GraphRow, error) {
 	labelMap := buildLabelMapShell(repoPath)
+	stashWIP, stashInternal := getStashGraph(repoPath)
 
-	result, err := gitcli.Run(repoPath, "log", "--all", "--date-order",
+	logArgs := []string{"log", "--all", "--date-order",
 		fmt.Sprintf("-n%d", limit),
-		"--pretty=format:%H\t%P\t%an\t%ai\t%s")
+		"--pretty=format:%H\t%P\t%an\t%ai\t%s"}
+	if len(stashWIP) > 0 {
+		logArgs = []string{"log", "refs/stash", "--all", "--date-order",
+			fmt.Sprintf("-n%d", limit),
+			"--pretty=format:%H\t%P\t%an\t%ai\t%s"}
+	}
+
+	result, err := gitcli.Run(repoPath, logArgs...)
 	if err != nil {
 		return nil, fmt.Errorf("git log: %w", err)
 	}
@@ -42,9 +50,17 @@ func getCommitGraphShell(repoPath string, limit int) ([]graph.GraphRow, error) {
 			continue
 		}
 
+		hash := parts[0]
+		if stashInternal[hash] {
+			continue
+		}
+
 		var parents []string
 		if parts[1] != "" {
 			parents = strings.Fields(parts[1])
+		}
+		if stashWIP[hash] && len(parents) > 1 {
+			parents = parents[:1]
 		}
 
 		t, _ := time.Parse("2006-01-02 15:04:05 -0700", parts[3])
@@ -54,7 +70,7 @@ func getCommitGraphShell(repoPath string, limit int) ([]graph.GraphRow, error) {
 		}
 
 		commits = append(commits, graph.CommitNode{
-			Hash:         parts[0],
+			Hash:         hash,
 			Subject:      parts[4],
 			Author:       parts[2],
 			Date:         dateStr,
@@ -63,6 +79,33 @@ func getCommitGraphShell(repoPath string, limit int) ([]graph.GraphRow, error) {
 	}
 
 	return graph.BuildGraph(commits, labelMap), nil
+}
+
+func getStashGraph(repoPath string) (wip map[string]bool, internal map[string]bool) {
+	wip = make(map[string]bool)
+	internal = make(map[string]bool)
+	result, err := gitcli.Run(repoPath, "stash", "list", "--format=%H\t%P")
+	if err != nil {
+		return
+	}
+	for line := range strings.SplitSeq(result.Stdout, "\n") {
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, "\t", 2)
+		if len(parts) < 2 {
+			continue
+		}
+		wipHash := parts[0]
+		wip[wipHash] = true
+		parents := strings.Fields(parts[1])
+		for i, p := range parents {
+			if i > 0 {
+				internal[p] = true
+			}
+		}
+	}
+	return
 }
 
 func buildLabelMapShell(repoPath string) map[string][]graph.Label {
@@ -121,6 +164,20 @@ func buildLabelMapShell(repoPath string) map[string][]graph.Label {
 		labelMap[hash] = append(labelMap[hash], label)
 	}
 
+	stashResult, _ := gitcli.Run(repoPath, "stash", "list", "--format=%gd\t%H")
+	if stashResult.Stdout != "" {
+		for line := range strings.SplitSeq(strings.TrimSpace(stashResult.Stdout), "\n") {
+			if line == "" {
+				continue
+			}
+			parts := strings.SplitN(line, "\t", 2)
+			if len(parts) < 2 || parts[1] == "" {
+				continue
+			}
+			labelMap[parts[1]] = append(labelMap[parts[1]], graph.Label{Name: parts[0], Type: "stash"})
+		}
+	}
+
 	return labelMap
 }
 
@@ -158,6 +215,15 @@ func getCommitDiffShell(repoPath, hash string) ([]FileDiff, error) {
 	result, err := gitcli.Run(repoPath, "diff-tree", "--no-commit-id", "-p", "--root", "-U3", hash)
 	if err != nil {
 		return nil, fmt.Errorf("git diff-tree: %w", err)
+	}
+	if result.Stdout != "" {
+		return emptyIfNil(parseUnifiedDiff(result.Stdout)), nil
+	}
+	// Stash and merge commits have multiple parents; diff-tree produces no output without -m.
+	// Fall back to first-parent comparison so the viewer shows something useful.
+	result, err = gitcli.Run(repoPath, "diff-tree", "--no-commit-id", "-p", "--root", "-U3", "-m", "--first-parent", hash)
+	if err != nil || result.Stdout == "" {
+		return []FileDiff{}, nil
 	}
 	return emptyIfNil(parseUnifiedDiff(result.Stdout)), nil
 }

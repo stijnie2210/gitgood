@@ -14,6 +14,10 @@ export function AppendToGitignore(arg1, arg2) {
   return window['go']['main']['App']['AppendToGitignore'](arg1, arg2);
 }
 
+export function ApplyStash(arg1, arg2) {
+  return window['go']['main']['App']['ApplyStash'](arg1, arg2);
+}
+
 export function CheckoutRef(arg1, arg2) {
   return window['go']['main']['App']['CheckoutRef'](arg1, arg2);
 }
@@ -52,6 +56,10 @@ export function DeleteWorkingFile(arg1, arg2) {
 
 export function DiscardFile(arg1, arg2) {
   return window['go']['main']['App']['DiscardFile'](arg1, arg2);
+}
+
+export function DropStash(arg1, arg2) {
+  return window['go']['main']['App']['DropStash'](arg1, arg2);
 }
 
 export function FetchAll(arg1) {
@@ -122,6 +130,10 @@ export function ListRecentRepositories() {
   return window['go']['main']['App']['ListRecentRepositories']();
 }
 
+export function ListStashes(arg1) {
+  return window['go']['main']['App']['ListStashes'](arg1);
+}
+
 export function LoadSession() {
   return window['go']['main']['App']['LoadSession']();
 }
@@ -150,6 +162,10 @@ export function PickDirectory() {
   return window['go']['main']['App']['PickDirectory']();
 }
 
+export function PopStash(arg1, arg2) {
+  return window['go']['main']['App']['PopStash'](arg1, arg2);
+}
+
 export function PullBranch(arg1) {
   return window['go']['main']['App']['PullBranch'](arg1);
 }
@@ -168,6 +184,10 @@ export function PushTag(arg1, arg2) {
 
 export function RenameBranch(arg1, arg2, arg3) {
   return window['go']['main']['App']['RenameBranch'](arg1, arg2, arg3);
+}
+
+export function RenameStash(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RenameStash'](arg1, arg2, arg3);
 }
 
 export function ResetBranch(arg1, arg2, arg3) {

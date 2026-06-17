@@ -265,7 +265,9 @@ async function pushTag(name: string) {
     <template v-else-if="mode === 'tag-created'">
       <div class="ctx-input-header">Tag '{{ inputVal }}' created</div>
       <div class="ctx-confirm-row">
-        <button class="ctx-confirm-btn ctx-confirm-btn--yes" @click="pushCreatedTag">Push tag</button>
+        <button class="ctx-confirm-btn ctx-confirm-btn--yes" @click="pushCreatedTag">
+          Push tag
+        </button>
         <button class="ctx-confirm-btn ctx-confirm-btn--cancel" @click="emit('close')">Done</button>
       </div>
     </template>

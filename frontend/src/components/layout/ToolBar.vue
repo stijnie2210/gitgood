@@ -5,6 +5,7 @@ import { useCommitsStore } from '../../stores/commits';
 import { useStagingStore } from '../../stores/staging';
 import { useBranchesStore } from '../../stores/branches';
 import { useToastStore } from '../../stores/toast';
+import { useStashStore } from '../../stores/stash';
 import {
   PushBranch,
   Stash,
@@ -18,6 +19,7 @@ const commits = useCommitsStore();
 const staging = useStagingStore();
 const branches = useBranchesStore();
 const toast = useToastStore();
+const stash = useStashStore();
 
 const repoPath = computed(() => repos.activeRepo?.path ?? '');
 const disabled = computed(() => !repos.activeRepo);
@@ -82,7 +84,11 @@ async function onStash() {
     'stash',
     async () => {
       await Stash(repoPath.value);
-      await staging.load(repoPath.value);
+      await Promise.all([
+        staging.load(repoPath.value),
+        stash.load(repoPath.value),
+        commits.load(repoPath.value),
+      ]);
     },
     'Changes stashed'
   );
@@ -93,7 +99,11 @@ async function onPop() {
     'pop',
     async () => {
       await StashPop(repoPath.value);
-      await staging.load(repoPath.value);
+      await Promise.all([
+        staging.load(repoPath.value),
+        stash.load(repoPath.value),
+        commits.load(repoPath.value),
+      ]);
     },
     'Stash applied'
   );

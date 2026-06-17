@@ -279,6 +279,26 @@ func (a *App) StashFile(repoPath, filePath string) error {
 	return gitcli.StashFile(repoPath, filePath)
 }
 
+func (a *App) ListStashes(repoPath string) ([]gitcli.StashEntry, error) {
+	return a.manager.ListStashes(repoPath)
+}
+
+func (a *App) ApplyStash(repoPath, ref string) error {
+	return a.manager.ApplyStash(repoPath, ref)
+}
+
+func (a *App) DropStash(repoPath, ref string) error {
+	return a.manager.DropStash(repoPath, ref)
+}
+
+func (a *App) PopStash(repoPath, ref string) error {
+	return a.manager.PopStash(repoPath, ref)
+}
+
+func (a *App) RenameStash(repoPath, ref, newMessage string) error {
+	return a.manager.RenameStash(repoPath, ref, newMessage)
+}
+
 func (a *App) AppendToGitignore(repoPath, pattern string) error {
 	return gitcli.AppendToGitignore(repoPath, pattern)
 }
