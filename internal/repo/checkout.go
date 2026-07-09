@@ -85,7 +85,7 @@ func switchConflictFiles(repoPath string) ([]string, error) {
 			continue
 		}
 		x, y := line[0], line[1]
-		if x == 'U' || y == 'U' || (x == 'A' && y == 'A') || (x == 'D' && y == 'D') {
+		if IsConflictedStatus(string(x), string(y)) {
 			files = append(files, strings.TrimSpace(line[3:]))
 		}
 	}

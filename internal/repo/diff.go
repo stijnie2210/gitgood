@@ -15,6 +15,13 @@ type FileStatus struct {
 	Unstaged string `json:"unstaged"` // Y code: ' ', 'M', 'D', '?'
 }
 
+// Single source of truth for which porcelain status codes mean "unresolved conflict".
+func IsConflictedStatus(staged, unstaged string) bool {
+	return staged == "U" || unstaged == "U" ||
+		(staged == "A" && unstaged == "A") ||
+		(staged == "D" && unstaged == "D")
+}
+
 func (m *Manager) GetStatus(repoPath string) ([]FileStatus, error) {
 	result, err := gitcli.Run(repoPath, "status", "--porcelain", "-u")
 	if err != nil {
