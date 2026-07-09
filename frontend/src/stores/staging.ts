@@ -16,6 +16,7 @@ import {
   GetMergeMessage,
   IsInRebase,
   GetRebaseState,
+  SyncAutostash,
 } from '../../wailsjs/go/main/App';
 import type { repo } from '../../wailsjs/go/models';
 
@@ -83,6 +84,12 @@ export const useStagingStore = defineStore('staging', () => {
     }
     loading.value = true;
     try {
+      try {
+        await SyncAutostash(repoPath);
+      } catch (e) {
+        // genuine failure, not the normal "still waiting" case (that resolves with no error)
+        console.error('SyncAutostash failed:', e);
+      }
       const [statusResult, mergeState, mergeMsg, rebaseActive, rebaseInfo] = await Promise.all([
         GetStatus(repoPath),
         IsInMerge(repoPath),
@@ -153,9 +160,13 @@ export const useStagingStore = defineStore('staging', () => {
     await FetchAll(repoPath);
   }
 
-  async function pullBranch(repoPath: string) {
-    await PullBranch(repoPath);
-    await load(repoPath);
+  async function pullBranch(repoPath: string, mode: string) {
+    try {
+      await PullBranch(repoPath, mode);
+    } finally {
+      // even a failed pull (e.g. merge conflict) needs load() for the conflict UI to show up
+      await load(repoPath);
+    }
   }
 
   async function commit(repoPath: string, message: string, amend: boolean) {
