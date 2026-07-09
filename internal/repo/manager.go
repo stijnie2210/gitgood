@@ -13,11 +13,17 @@ import (
 type Manager struct {
 	mu    sync.RWMutex
 	repos map[string]*git.Repository // keyed by absolute path
+
+	autostashMu    sync.Mutex
+	autostash      map[string]autostashPhase // keyed by repoPath; tracks pending PullBranch autostash pop/drop
+	autostashLocks map[string]*sync.Mutex    // keyed by repoPath; serializes PullBranch/SyncAutostash per repo
 }
 
 func NewManager() *Manager {
 	return &Manager{
-		repos: make(map[string]*git.Repository),
+		repos:          make(map[string]*git.Repository),
+		autostash:      make(map[string]autostashPhase),
+		autostashLocks: make(map[string]*sync.Mutex),
 	}
 }
 
@@ -28,18 +34,21 @@ func (m *Manager) Open(path string) error {
 	}
 
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	if _, ok := m.repos[abs]; ok {
+		m.mu.Unlock()
 		return nil
 	}
 
 	r, err := git.PlainOpen(abs)
 	if err != nil {
+		m.mu.Unlock()
 		return fmt.Errorf("opening repo: %w", err)
 	}
 
 	m.repos[abs] = r
+	m.mu.Unlock()
+
+	m.recoverAutostashPhase(abs)
 	return nil
 }
 

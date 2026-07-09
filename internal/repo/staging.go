@@ -32,10 +32,6 @@ func (m *Manager) FetchAll(repoPath string) error {
 	return gitcli.FetchAll(repoPath)
 }
 
-func (m *Manager) PullBranch(repoPath string) error {
-	return gitcli.Pull(repoPath)
-}
-
 func (m *Manager) PushBranch(repoPath string) error {
 	return gitcli.Push(repoPath)
 }
