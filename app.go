@@ -129,8 +129,12 @@ func (a *App) FetchAll(repoPath string) error {
 	return a.manager.FetchAll(repoPath)
 }
 
-func (a *App) PullBranch(repoPath string) error {
-	return a.manager.PullBranch(repoPath)
+func (a *App) PullBranch(repoPath, mode string) error {
+	return a.manager.PullBranch(repoPath, mode)
+}
+
+func (a *App) SyncAutostash(repoPath string) error {
+	return a.manager.SyncAutostash(repoPath)
 }
 
 func (a *App) PushBranch(repoPath string) error {

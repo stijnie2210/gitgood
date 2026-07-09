@@ -91,7 +91,7 @@ export function PickDirectory():Promise<string>;
 
 export function PopStash(arg1:string,arg2:string):Promise<void>;
 
-export function PullBranch(arg1:string):Promise<void>;
+export function PullBranch(arg1:string,arg2:string):Promise<void>;
 
 export function PushBranch(arg1:string):Promise<void>;
 
@@ -130,6 +130,8 @@ export function StashFile(arg1:string,arg2:string):Promise<void>;
 export function StashPop(arg1:string):Promise<void>;
 
 export function SwitchBranch(arg1:string,arg2:string,arg3:boolean):Promise<repo.SwitchResult>;
+
+export function SyncAutostash(arg1:string):Promise<void>;
 
 export function UnstageFile(arg1:string,arg2:string):Promise<void>;
 

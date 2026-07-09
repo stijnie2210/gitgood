@@ -174,8 +174,8 @@ export function PopStash(arg1, arg2) {
   return window['go']['main']['App']['PopStash'](arg1, arg2);
 }
 
-export function PullBranch(arg1) {
-  return window['go']['main']['App']['PullBranch'](arg1);
+export function PullBranch(arg1, arg2) {
+  return window['go']['main']['App']['PullBranch'](arg1, arg2);
 }
 
 export function PushBranch(arg1) {
@@ -252,6 +252,10 @@ export function StashPop(arg1) {
 
 export function SwitchBranch(arg1, arg2, arg3) {
   return window['go']['main']['App']['SwitchBranch'](arg1, arg2, arg3);
+}
+
+export function SyncAutostash(arg1) {
+  return window['go']['main']['App']['SyncAutostash'](arg1);
 }
 
 export function UnstageFile(arg1, arg2) {
