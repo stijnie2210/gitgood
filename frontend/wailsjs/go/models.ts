@@ -158,6 +158,7 @@ export namespace repo {
 	    commitGraphLimit: number;
 	    diffContextLines: number;
 	    dateFormat: string;
+	    pullMode: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppPrefs(source);
@@ -171,6 +172,7 @@ export namespace repo {
 	        this.commitGraphLimit = source["commitGraphLimit"];
 	        this.diffContextLines = source["diffContextLines"];
 	        this.dateFormat = source["dateFormat"];
+	        this.pullMode = source["pullMode"];
 	    }
 	}
 	export class BranchInfo {

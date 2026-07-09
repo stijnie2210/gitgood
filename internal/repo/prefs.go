@@ -14,6 +14,7 @@ type AppPrefs struct {
 	CommitGraphLimit      int    `json:"commitGraphLimit"`
 	DiffContextLines      int    `json:"diffContextLines"`
 	DateFormat            string `json:"dateFormat"` // "relative" | "absolute"
+	PullMode              string `json:"pullMode"`   // "fetch" | "ff" | "ff-only" | "rebase" — default action for the toolbar Pull button
 }
 
 var (
@@ -29,6 +30,7 @@ func DefaultPrefs() AppPrefs {
 		CommitGraphLimit:      2000,
 		DiffContextLines:      3,
 		DateFormat:            "relative",
+		PullMode:              "ff",
 	}
 }
 

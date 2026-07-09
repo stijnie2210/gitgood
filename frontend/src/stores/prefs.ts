@@ -13,6 +13,7 @@ export const usePrefsStore = defineStore('prefs', () => {
     commitGraphLimit: 2000,
     diffContextLines: 3,
     dateFormat: 'relative',
+    pullMode: 'ff',
   });
   const loaded = ref(false);
   const modalOpen = ref(false);
