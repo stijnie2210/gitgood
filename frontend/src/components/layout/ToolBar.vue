@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue';
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue';
 import { useReposStore } from '../../stores/repos';
 import { useCommitsStore } from '../../stores/commits';
 import { useStagingStore } from '../../stores/staging';
@@ -25,6 +25,7 @@ const stash = useStashStore();
 
 const repoPath = computed(() => repos.activeRepo?.path ?? '');
 const disabled = computed(() => !repos.activeRepo);
+const pullDisabled = computed(() => disabled.value || staging.isInMerge || staging.isInRebase);
 
 const busy = ref<string | null>(null);
 
@@ -57,16 +58,53 @@ async function onFetch() {
   );
 }
 
+const PULL_MODES: { value: string; label: string }[] = [
+  { value: 'fetch', label: 'Fetch All' },
+  { value: 'ff', label: 'Pull (fast-forward if possible)' },
+  { value: 'ff-only', label: 'Pull (fast-forward only)' },
+  { value: 'rebase', label: 'Pull (rebase)' },
+];
+
+const pullMode = computed(() => prefsStore.prefs.pullMode || 'ff');
+const showPullMenu = ref(false);
+const pullMenuEl = ref<HTMLElement | null>(null);
+
+function togglePullMenu() {
+  showPullMenu.value = !showPullMenu.value;
+}
+
+async function selectPullMode(mode: string) {
+  showPullMenu.value = false;
+  if (mode === pullMode.value) {
+    return;
+  }
+  await prefsStore.save({ pullMode: mode });
+}
+
+function onPullMenuMouseDown(e: MouseEvent) {
+  if (pullMenuEl.value && !pullMenuEl.value.contains(e.target as Node)) {
+    showPullMenu.value = false;
+  }
+}
+
+onMounted(() => window.addEventListener('mousedown', onPullMenuMouseDown));
+onUnmounted(() => window.removeEventListener('mousedown', onPullMenuMouseDown));
+
 async function onPull() {
+  const mode = pullMode.value;
   await run(
     'pull',
     async () => {
-      await staging.pullBranch(repoPath.value);
+      if (mode === 'fetch') {
+        await staging.fetchAll(repoPath.value);
+      } else {
+        await staging.pullBranch(repoPath.value, mode);
+      }
       await commits.load(repoPath.value);
-      staging.load(repoPath.value);
-      branches.load(repoPath.value);
+      await staging.load(repoPath.value);
+      await branches.load(repoPath.value);
     },
-    'Pulled successfully'
+    mode === 'fetch' ? 'Fetched successfully' : 'Pulled successfully'
   );
 }
 
@@ -184,29 +222,74 @@ async function confirmBranch() {
           </span>
           <span class="tbtn-label">Fetch</span>
         </button>
-        <button
-          class="tbtn"
-          :disabled="disabled"
-          :class="{ loading: busy === 'pull' }"
-          @click="onPull"
-        >
-          <span class="tbtn-icon">
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 18 18"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <line x1="9" y1="3" x2="9" y2="13" />
-              <polyline points="5,9 9,14 13,9" />
+        <div ref="pullMenuEl" class="pull-btn-wrap">
+          <button
+            class="tbtn"
+            :disabled="pullDisabled"
+            :class="{ loading: busy === 'pull' }"
+            @click="onPull"
+          >
+            <span class="tbtn-icon">
+              <svg
+                v-if="pullMode === 'fetch'"
+                width="18"
+                height="18"
+                viewBox="0 0 18 18"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="4" y1="3" x2="14" y2="3" />
+                <line x1="9" y1="5" x2="9" y2="13" />
+                <polyline points="5,10 9,14 13,10" />
+              </svg>
+              <svg
+                v-else
+                width="18"
+                height="18"
+                viewBox="0 0 18 18"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="9" y1="3" x2="9" y2="13" />
+                <polyline points="5,9 9,14 13,9" />
+              </svg>
+            </span>
+            <span class="tbtn-label">{{ pullMode === 'fetch' ? 'Fetch' : 'Pull' }}</span>
+          </button>
+          <button
+            class="pull-mode-toggle"
+            :disabled="pullDisabled"
+            :class="{ active: showPullMenu }"
+            title="Choose default pull/fetch operation"
+            @click.stop="togglePullMenu"
+          >
+            <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor">
+              <path d="M0 1 L8 1 L4 6 Z" />
             </svg>
-          </span>
-          <span class="tbtn-label">Pull</span>
-        </button>
+          </button>
+
+          <div v-if="showPullMenu" class="pull-menu">
+            <p class="pull-menu-desc">
+              Select a default pull/fetch operation to execute when clicking this button
+            </p>
+            <button
+              v-for="opt in PULL_MODES"
+              :key="opt.value"
+              class="pull-menu-item"
+              :class="{ selected: opt.value === pullMode }"
+              @click="selectPullMode(opt.value)"
+            >
+              <span class="pull-menu-radio" />
+              <span>{{ opt.label }}</span>
+            </button>
+          </div>
+        </div>
         <button
           class="tbtn"
           :disabled="disabled"
@@ -476,6 +559,105 @@ async function confirmBranch() {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Pull mode dropdown */
+.pull-btn-wrap {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.pull-mode-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  align-self: stretch;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #667;
+  cursor: pointer;
+  border-radius: 4px;
+  margin-left: 1px;
+}
+
+.pull-mode-toggle:hover:not(:disabled),
+.pull-mode-toggle.active {
+  color: #bbc;
+  background: #14142a;
+}
+
+.pull-mode-toggle:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.pull-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 320px;
+  background: #23233c;
+  border: 1px solid #34345a;
+  border-radius: 8px;
+  padding: 12px;
+  z-index: 100;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.pull-menu-desc {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #99a;
+}
+
+.pull-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: #ccd;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pull-menu-item:hover {
+  background: #2c2c4a;
+}
+
+.pull-menu-item.selected {
+  background: #3a5a44;
+  color: #fff;
+}
+
+.pull-menu-radio {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid #778;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.pull-menu-item.selected .pull-menu-radio {
+  border-color: #fff;
+}
+
+.pull-menu-item.selected .pull-menu-radio::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  background: #fff;
 }
 
 /* Branch popover */
