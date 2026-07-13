@@ -1,7 +1,24 @@
 <script setup lang="ts">
-import { useToastStore } from '../../stores/toast';
+import { useToastStore, isLongMessage } from '../../stores/toast';
+import { useLogModalStore } from '../../stores/logModal';
 
 const toast = useToastStore();
+const logModal = useLogModalStore();
+
+const PREVIEW_LIMIT = 160;
+
+function preview(message: string): string {
+  const firstLine = message.split('\n')[0];
+  if (firstLine.length > PREVIEW_LIMIT) {
+    return firstLine.slice(0, PREVIEW_LIMIT) + '…';
+  }
+  return message.includes('\n') ? firstLine + ' …' : firstLine;
+}
+
+function viewLog(t: { type: string; message: string }, e: MouseEvent) {
+  e.stopPropagation();
+  logModal.show(t.type === 'error' ? 'Error details' : 'Details', t.message);
+}
 </script>
 
 <template>
@@ -20,7 +37,10 @@ const toast = useToastStore();
             <template v-else-if="t.type === 'error'">✕</template>
             <template v-else>i</template>
           </span>
-          <span class="toast-msg">{{ t.message }}</span>
+          <span class="toast-msg">{{ isLongMessage(t.message) ? preview(t.message) : t.message }}</span>
+          <button v-if="isLongMessage(t.message)" class="toast-action" @click="viewLog(t, $event)">
+            View log
+          </button>
         </div>
       </TransitionGroup>
     </div>
@@ -46,7 +66,7 @@ const toast = useToastStore();
   padding: 9px 14px;
   border-radius: 6px;
   font-size: 12px;
-  max-width: 340px;
+  max-width: 420px;
   cursor: pointer;
   pointer-events: all;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
@@ -81,6 +101,21 @@ const toast = useToastStore();
 .toast-msg {
   flex: 1;
   line-height: 1.4;
+}
+
+.toast-action {
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  color: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.toast-action:hover {
+  background: rgba(255, 255, 255, 0.16);
 }
 
 /* Transitions */
