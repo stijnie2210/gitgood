@@ -23,6 +23,7 @@ func (e *ExitError) Error() string {
 func Run(repoPath string, args ...string) (Result, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = repoPath
+	cmd.Env = mergedEnv()
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -47,6 +48,7 @@ func Run(repoPath string, args ...string) (Result, error) {
 func RunWithInput(repoPath string, stdin []byte, args ...string) (Result, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = repoPath
+	cmd.Env = mergedEnv()
 	cmd.Stdin = bytes.NewReader(stdin)
 
 	var stdout, stderr bytes.Buffer

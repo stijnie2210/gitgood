@@ -1,0 +1,59 @@
+package gitcli
+
+import (
+	"os"
+	"os/exec"
+	"strings"
+	"sync"
+)
+
+const pathMarker = "__GITGOOD_PATH__"
+
+var (
+	shellPathOnce  sync.Once
+	shellPathValue string
+)
+
+// macOS launches GUI apps with launchd's bare PATH (/usr/bin:/bin:/usr/sbin:/sbin),
+// so subprocesses can't see Homebrew/nvm/docker paths a repo's git hooks rely on.
+// Asking the user's login shell for its PATH matches what a terminal-launched git would see.
+func shellPath() string {
+	shellPathOnce.Do(func() {
+		shellPathValue = os.Getenv("PATH")
+
+		shell := os.Getenv("SHELL")
+		if shell == "" {
+			shell = "/bin/zsh"
+		}
+
+		out, err := exec.Command(shell, "-ilc", "echo "+pathMarker+"$PATH"+pathMarker).Output()
+		if err != nil {
+			return
+		}
+
+		lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+		last := lines[len(lines)-1]
+		start := strings.Index(last, pathMarker)
+		if start == -1 {
+			return
+		}
+		rest := last[start+len(pathMarker):]
+		end := strings.Index(rest, pathMarker)
+		if end == -1 {
+			return
+		}
+		shellPathValue = rest[:end]
+	})
+	return shellPathValue
+}
+
+func mergedEnv() []string {
+	base := os.Environ()
+	result := make([]string, 0, len(base)+1)
+	for _, kv := range base {
+		if !strings.HasPrefix(kv, "PATH=") {
+			result = append(result, kv)
+		}
+	}
+	return append(result, "PATH="+shellPath())
+}
