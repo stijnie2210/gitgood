@@ -10,13 +10,19 @@ export interface Toast {
   duration: number;
 }
 
+const PREVIEW_LIMIT = 160;
+
+export function isLongMessage(message: string): boolean {
+  return message.length > PREVIEW_LIMIT || message.includes('\n');
+}
+
 let nextId = 1;
 
 export const useToastStore = defineStore('toast', () => {
   const toasts = ref<Toast[]>([]);
 
   function push(message: string, type: ToastType = 'info', duration?: number) {
-    const ms = duration ?? (type === 'error' ? 7000 : 3500);
+    const ms = duration ?? (isLongMessage(message) ? 0 : type === 'error' ? 7000 : 3500);
     const id = nextId++;
     toasts.value.push({ id, message, type, duration: ms });
     if (ms > 0) {
