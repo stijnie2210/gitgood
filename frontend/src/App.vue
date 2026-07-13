@@ -11,6 +11,7 @@ import FileDiffView from './components/graph/FileDiffView.vue';
 import StagingView from './components/staging/StagingView.vue';
 import ToastStack from './components/layout/ToastStack.vue';
 import PreferencesModal from './components/layout/PreferencesModal.vue';
+import LogViewerModal from './components/layout/LogViewerModal.vue';
 import { useReposStore } from './stores/repos';
 import { useCommitsStore } from './stores/commits';
 import { useStagingStore } from './stores/staging';
@@ -176,6 +177,7 @@ onUnmounted(() => {
     <ToolBar />
     <ToastStack />
     <PreferencesModal />
+    <LogViewerModal />
     <div class="workspace">
       <Sidebar :style="{ width: sidebarWidth + 'px' }" />
       <div class="resize-handle" @mousedown.prevent="startSidebarResize" />
