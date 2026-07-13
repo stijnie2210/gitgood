@@ -26,7 +26,8 @@ func shellPath() string {
 			shell = "/bin/zsh"
 		}
 
-		out, err := exec.Command(shell, "-ilc", "echo "+pathMarker+"$PATH"+pathMarker).Output()
+		script := "printf '%s%s%s' '" + pathMarker + "' \"$PATH\" '" + pathMarker + "'"
+		out, err := exec.Command(shell, "-ilc", script).Output()
 		if err != nil {
 			return
 		}
