@@ -31,6 +31,8 @@ func main() {
 		}
 	})
 
+	appMenu.Append(menu.EditMenu())
+
 	err := wails.Run(&options.App{
 		Title:  "gitgood",
 		Width:  1440,
