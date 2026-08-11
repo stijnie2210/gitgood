@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { FileDiff, Hunk } from '../../stores/staging';
+import { highlightLine, languageForPath } from '../../utils/highlight';
 
 const props = defineProps<{
   diffs: FileDiff[];
@@ -8,6 +9,8 @@ const props = defineProps<{
   path: string;
   diffLoading: boolean;
 }>();
+
+const lang = computed(() => languageForPath(props.path));
 
 const emit = defineEmits<{
   'stage-file': [];
@@ -93,7 +96,7 @@ const isBinary = computed(() => props.diffs.some((d) => d.isBinary));
           }}</span>
           <span class="diff-lineno old">{{ line.oldLine || '' }}</span>
           <span class="diff-lineno new">{{ line.newLine || '' }}</span>
-          <span class="diff-content">{{ line.content }}</span>
+          <span class="diff-content" v-html="highlightLine(line.content, lang)"></span>
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useDetailWidth } from '../../composables/useDetailWidth';
 import { isImageFile, imageDataUrl } from '../../utils/imageUtils';
+import { highlightLine, languageForPath } from '../../utils/highlight';
 
 const fileListWidth = useDetailWidth();
 
@@ -33,6 +34,14 @@ const file = computed(() =>
 const selectedRow = computed(
   () => commits.rows.find((r) => r.hash === commits.selectedHash) ?? null
 );
+
+const lang = computed(() => {
+  const f = file.value;
+  if (!f) {
+    return null;
+  }
+  return languageForPath(f.newPath || f.oldPath || '');
+});
 
 const imageSrc = ref<string | null>(null);
 const imageLoading = ref(false);
@@ -156,7 +165,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeyDown));
               }}</span>
               <span class="diff-lineno old">{{ line.oldLine || '' }}</span>
               <span class="diff-lineno new">{{ line.newLine || '' }}</span>
-              <span class="diff-content">{{ line.content }}</span>
+              <span class="diff-content" v-html="highlightLine(line.content, lang)"></span>
             </div>
           </div>
         </template>
